@@ -36,7 +36,7 @@ impl Builder {
 
     pub async fn build_backend(&self) -> Result<()> {
         info!("Building backend");
-        let mut image_tag: String = "".into();
+        let mut image_tag = &self.docker_image;
 
         match self.plugin.custom_backend {
             CustomBackend::Dockerfile => {
@@ -50,7 +50,7 @@ impl Builder {
         }
 
         docker::run_image(
-            image_tag,
+            image_tag.into(),
             vec![
                 (
                     self.plugin_root
