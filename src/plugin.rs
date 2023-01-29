@@ -1,7 +1,8 @@
 use anyhow::{anyhow, Result};
 use boolinator::Boolinator;
+use log::info;
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, path::PathBuf};
+use std::path::{Path, PathBuf};
 
 pub enum CustomBackend {
     Dockerfile,
@@ -23,13 +24,10 @@ pub struct PluginFile {
 
     // TODO: Use a Vec<Flag> enum
     pub flags: Vec<String>,
-
-    // TODO: Use an actual type here
-    pub publish: HashMap<String, String>,
 }
 
 impl Plugin {
-    fn find_custom_backend(plugin_root: &PathBuf) -> Result<CustomBackend> {
+    fn find_custom_backend(plugin_root: &Path) -> Result<CustomBackend> {
         let backend_directory = plugin_root.join("backend");
 
         let has_backend_directory = backend_directory.exists();
@@ -42,19 +40,21 @@ impl Plugin {
             (true, false, true) => Ok(CustomBackend::Entrypoint),
             (true, true, true) => Ok(CustomBackend::DockerfileAndEntrypoint),
             (true, false, false) => Err(anyhow!(
-                "Backend directory found, but no Dockerfile or entrypoint.sh"
+                "Backend directory found, but no Dockerfile or entrypoint.sh. If you're using a custom backend, refer to the documentation for information on how to build it. If not, remove the `backend` directory."
             )),
         }
     }
 
-    fn find_frontend(plugin_root: &PathBuf) -> Result<()> {
+    fn find_frontend(plugin_root: &Path) -> Result<()> {
+        info!("Looking for package.json...");
         plugin_root
             .join("package.json")
             .exists()
             .as_result((), anyhow!("Could not find package.json"))
     }
 
-    fn find_pluginfile(plugin_root: &PathBuf) -> Result<PluginFile> {
+    fn find_pluginfile(plugin_root: &Path) -> Result<PluginFile> {
+        info!("Looking for plugin.json...");
         let pluginfile_location = plugin_root.join("plugin.json");
 
         plugin_root
