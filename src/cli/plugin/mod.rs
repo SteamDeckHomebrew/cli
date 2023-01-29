@@ -8,10 +8,15 @@ pub async fn parse(args: &PluginCLI) -> Result<()> {
         PluginCommand::Build {
             plugin_path,
             output_path,
+            tmp_output_path,
         } => {
-            build::Builder::new(plugin_path.into(), output_path.into())?
-                .run()
-                .await
+            build::Builder::new(
+                plugin_path.into(),
+                output_path.into(),
+                tmp_output_path.into(),
+            )?
+            .run()
+            .await
         }
         PluginCommand::New => todo!(),
         PluginCommand::Deploy => todo!(),

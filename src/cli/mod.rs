@@ -28,8 +28,11 @@ pub enum PluginCommand {
         #[arg(default_value = "./")]
         plugin_path: PathBuf,
 
-        #[arg(default_value = "./out")]
+        #[arg(short, long, default_value = "./out")]
         output_path: PathBuf,
+
+        #[arg(short, long, default_value = "/tmp/decky")]
+        tmp_output_path: PathBuf,
     },
     New,
     Deploy,
