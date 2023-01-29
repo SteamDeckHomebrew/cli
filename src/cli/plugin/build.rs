@@ -8,11 +8,9 @@ use bollard::{
 use futures::{StreamExt, TryStreamExt};
 use log::{debug, info};
 use std::{
-    collections::HashMap,
     io::{stdout, Write},
     path::PathBuf,
 };
-use tokio::spawn;
 
 use crate::plugin::Plugin;
 
