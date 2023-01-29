@@ -6,8 +6,6 @@ use std::path::{Path, PathBuf};
 
 pub enum CustomBackend {
     Dockerfile,
-    Entrypoint,
-    DockerfileAndEntrypoint,
     None,
 }
 
@@ -32,14 +30,11 @@ impl Plugin {
 
         let has_backend_directory = backend_directory.exists();
         let has_dockerfile = backend_directory.join("Dockerfile").exists();
-        let has_entrypoint = backend_directory.join("entrypoint.sh").exists();
 
-        match (has_backend_directory, has_dockerfile, has_entrypoint) {
-            (false, _, _) => Ok(CustomBackend::None),
-            (true, true, false) => Ok(CustomBackend::Dockerfile),
-            (true, false, true) => Ok(CustomBackend::Entrypoint),
-            (true, true, true) => Ok(CustomBackend::DockerfileAndEntrypoint),
-            (true, false, false) => Err(anyhow!(
+        match (has_backend_directory, has_dockerfile) {
+            (false, _) => Ok(CustomBackend::None),
+            (true, true) => Ok(CustomBackend::Dockerfile),
+            (true, false) => Err(anyhow!(
                 "Backend directory found, but no Dockerfile or entrypoint.sh. If you're using a custom backend, refer to the documentation for information on how to build it. If not, remove the `backend` directory."
             )),
         }
@@ -66,6 +61,8 @@ impl Plugin {
     }
 
     pub fn new(plugin_root: PathBuf) -> Result<Self> {
+        Plugin::find_frontend(&plugin_root)?;
+
         Ok(Self {
             meta: Plugin::find_pluginfile(&plugin_root)?,
             custom_backend: Plugin::find_custom_backend(&plugin_root)?,

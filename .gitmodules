@@ -1,0 +1,3 @@
+[submodule "test/PowerTools"]
+	path = test/PowerTools
+	url = git@github.com:NGnius/PowerTools.git

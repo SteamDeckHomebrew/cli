@@ -1,4 +1,5 @@
 mod cli;
+mod docker;
 mod plugin;
 
 use clap::Parser;
