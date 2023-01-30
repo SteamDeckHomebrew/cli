@@ -1,7 +1,12 @@
 use anyhow::{anyhow, Result};
 use boolinator::Boolinator;
 use log::info;
-use std::path::PathBuf;
+use std::{
+    io::{Read, Write},
+    path::{Path, PathBuf},
+};
+use walkdir::WalkDir;
+use zip::write::FileOptions;
 
 use crate::{
     docker,
@@ -36,7 +41,7 @@ impl Builder {
 
     pub async fn build_backend(&self) -> Result<()> {
         info!("Building backend");
-        let mut image_tag = &self.docker_image;
+        let mut image_tag: String = self.docker_image.clone();
 
         match self.plugin.custom_backend {
             CustomBackend::Dockerfile => {
@@ -44,7 +49,8 @@ impl Builder {
                     self.plugin_root.join("backend").join("Dockerfile"),
                     self.plugin.meta.name.to_lowercase().clone(),
                 )
-                .await?;
+                .await?
+                .clone();
             }
             CustomBackend::None => {}
         }
@@ -70,27 +76,85 @@ impl Builder {
         .await
     }
 
+    pub fn zip_plugin(&self) -> Result<()> {
+        let file = std::fs::File::create(&self.output_root.join("out.zip"))
+            .expect("Could not create zip file");
+        let mut zip = zip::ZipWriter::new(file);
+        let mut buffer = Vec::new();
+
+        let tmp_output_directory = WalkDir::new(&self.tmp_output_root);
+
+        let directories = vec!["bin", "dist"];
+        let files = vec![
+            "LICENSE",
+            "main.py",
+            "package.json",
+            "plugin.json",
+            "README.md",
+        ];
+
+        for entry in tmp_output_directory {
+            let file = entry?;
+            let path = file.path();
+            let name = path.strip_prefix(&self.tmp_output_root).unwrap();
+
+            if path.is_file() {
+                let mut f = std::fs::File::open(path)?;
+                f.read_to_end(&mut buffer)?;
+
+                zip.start_file(name.to_str().unwrap(), FileOptions::default())?;
+
+                zip.write(&*buffer)?;
+                buffer.clear();
+            } else if !name.as_os_str().is_empty() && directories.contains(&name.to_str().unwrap())
+            {
+                zip.add_directory(name.to_str().unwrap(), FileOptions::default())?;
+            }
+        }
+
+        zip.finish()?;
+
+        // Write top level files
+        // files
+        //     .iter()
+        //     .map(|file| self.tmp_output_root.join(file))
+        //     .filter(|file| file.exists())
+        //     .try_for_each(|file: PathBuf| -> Result<()> {
+        //         let mut f = std::fs::File::open(&file)?;
+        //         f.read_to_end(&mut buffer)?;
+
+        //         zip.start_file(
+        //             file.file_name().unwrap().to_str().unwrap(),
+        //             FileOptions::default(),
+        //         )?;
+
+        //         zip.write(&*buffer)?;
+        //         buffer.clear();
+
+        //         Ok(())
+        //     })?;
+
+        Ok(())
+    }
+
     fn validate_tmp_output_root(tmp_output_root: &PathBuf) -> Result<&PathBuf> {
-        Ok(tmp_output_root)
-            .and_then(|path| {
-                path.is_absolute().as_result(
-                    path,
-                    anyhow!("For safety reasons, tmp_output_root must be an absolute path"),
-                )
-            })
-            .and_then(|path| {
-                path.is_dir()
-                    .as_result(path, anyhow!("tmp_output_root must be a directory"))
-            })
+        Ok(tmp_output_root).and_then(|path| {
+            path.is_absolute().as_result(
+                path,
+                anyhow!("For safety reasons, tmp_output_root must be an absolute path"),
+            )
+        })
     }
 
     pub async fn run(&mut self) -> Result<()> {
         info!("Creating temporary build directory");
-        std::fs::remove_dir_all(&self.tmp_output_root)?;
+        std::fs::remove_dir_all(&self.tmp_output_root).ok();
         std::fs::create_dir(&self.tmp_output_root)?;
 
+        info!("Building plugin");
         self.build_backend().await?;
         self.build_frontend().await?;
+        self.zip_plugin()?;
 
         Ok(())
     }
