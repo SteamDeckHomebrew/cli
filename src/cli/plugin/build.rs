@@ -114,26 +114,6 @@ impl Builder {
 
         zip.finish()?;
 
-        // Write top level files
-        // files
-        //     .iter()
-        //     .map(|file| self.tmp_output_root.join(file))
-        //     .filter(|file| file.exists())
-        //     .try_for_each(|file: PathBuf| -> Result<()> {
-        //         let mut f = std::fs::File::open(&file)?;
-        //         f.read_to_end(&mut buffer)?;
-
-        //         zip.start_file(
-        //             file.file_name().unwrap().to_str().unwrap(),
-        //             FileOptions::default(),
-        //         )?;
-
-        //         zip.write(&*buffer)?;
-        //         buffer.clear();
-
-        //         Ok(())
-        //     })?;
-
         Ok(())
     }
 
