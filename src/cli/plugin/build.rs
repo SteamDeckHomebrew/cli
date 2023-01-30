@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use boolinator::Boolinator;
 use log::info;
 use std::{
@@ -77,6 +77,7 @@ impl Builder {
     }
 
     pub fn zip_plugin(&self) -> Result<()> {
+        info!("Zipping plugin");
         let file = std::fs::File::create(&self.output_root.join("out.zip"))
             .expect("Could not create zip file");
         let mut zip = zip::ZipWriter::new(file);
@@ -129,7 +130,8 @@ impl Builder {
     pub async fn run(&mut self) -> Result<()> {
         info!("Creating temporary build directory");
         std::fs::remove_dir_all(&self.tmp_output_root).ok();
-        std::fs::create_dir(&self.tmp_output_root)?;
+        std::fs::create_dir(&self.tmp_output_root)
+            .context("Temporary build directory already exists")?;
 
         info!("Building plugin");
         self.build_backend().await?;
