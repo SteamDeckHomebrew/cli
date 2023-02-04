@@ -41,6 +41,11 @@ impl Builder {
     }
 
     pub async fn build_backend(&self) -> Result<()> {
+        if !&self.plugin_root.join("backend").exists() {
+            info!("Plugin does not have a custom backend");
+            return Ok(());
+        }
+
         info!("Building backend");
         let mut image_tag: String = self.docker_image.clone();
 
@@ -104,7 +109,7 @@ impl Builder {
             .expect("Could not create zip file");
         let mut zip = zip::ZipWriter::new(file);
 
-        let directories = vec!["bin", "dist"];
+        let directories = vec![("bin", false), ("dist", true)];
         let files = vec![
             "LICENSE",
             "main.py",
@@ -119,7 +124,13 @@ impl Builder {
         }
 
         for directory in directories {
-            let full_path = self.tmp_output_root.join(&directory);
+            let full_path = self.tmp_output_root.join(&directory.0);
+
+            if directory.1 == false && !full_path.exists() {
+                info!("Optional directory {} not found. Continuing", &directory.0);
+                continue;
+            }
+
             let dir_entries = WalkDir::new(full_path);
 
             for entry in dir_entries {

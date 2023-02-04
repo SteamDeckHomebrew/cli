@@ -1,3 +1,6 @@
 [submodule "test/PowerTools"]
 	path = test/PowerTools
 	url = git@github.com:NGnius/PowerTools.git
+[submodule "test/decky-wine-manager"]
+	path = test/decky-wine-manager
+	url = git@github.com:SkyLeite/decky-wine-manager.git
