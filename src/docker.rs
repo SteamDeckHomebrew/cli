@@ -4,6 +4,7 @@ use tokio::{
     io::{AsyncBufReadExt, BufReader},
     process::Command,
 };
+use users::{get_effective_gid, get_effective_uid};
 
 async fn run_command(cmd: &mut Command) -> Result<()> {
     cmd.stdout(Stdio::piped());
@@ -52,9 +53,17 @@ pub async fn build_image(dockerfile: PathBuf, tag: String) -> Result<String> {
 }
 
 // docker run --rm -i -v $PWD/backend:/backend -v /tmp/output/$plugin/backend/out:/backend/out --entrypoint /backend/entrypoint.sh "$docker_name"
-pub async fn run_image(tag: String, binds: Vec<(String, String)>) -> Result<()> {
+pub async fn run_image(tag: String, binds: Vec<(String, String)>, run_as_root: bool) -> Result<()> {
     let mut cmd = Command::new("docker");
-    let command_with_default_args = cmd.arg("run").arg("--rm");
+    let mut command_with_default_args = cmd.arg("run").arg("--rm");
+
+    if !run_as_root {
+        command_with_default_args = command_with_default_args.arg("--user").arg(format!(
+            "{}:{}",
+            get_effective_uid(),
+            get_effective_gid()
+        ));
+    }
 
     let mut dynamic_args: Vec<String> = vec![];
 

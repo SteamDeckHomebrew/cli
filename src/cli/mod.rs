@@ -33,6 +33,9 @@ pub enum PluginCommand {
 
         #[arg(short, long, default_value = "/tmp/decky")]
         tmp_output_path: PathBuf,
+
+        #[arg(short, long, default_value = "false")]
+        build_as_root: bool,
     },
     New,
     Deploy,

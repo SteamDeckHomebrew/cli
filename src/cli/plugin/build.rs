@@ -21,6 +21,7 @@ pub struct Builder {
     pub plugin_root: PathBuf,
     pub output_root: PathBuf,
     pub tmp_build_root: PathBuf,
+    pub build_as_root: bool,
 }
 
 impl Builder {
@@ -36,6 +37,7 @@ impl Builder {
                 ),
                 (self.tmp_build_root.to_str().unwrap().into(), "/out".into()),
             ],
+            self.build_as_root,
         )
         .await
     }
@@ -78,6 +80,7 @@ impl Builder {
                     "/backend/out".into(),
                 ),
             ],
+            self.build_as_root,
         )
         .await
     }
@@ -179,6 +182,7 @@ impl Builder {
         plugin_root: PathBuf,
         output_root: PathBuf,
         tmp_build_root: PathBuf,
+        build_as_root: bool,
     ) -> Result<Self> {
         if !output_root.exists() {
             std::fs::create_dir(&output_root)?;
@@ -196,6 +200,7 @@ impl Builder {
                 .expect("Could not find output root"),
             tmp_build_root,
             docker_image: "ghcr.io/steamdeckhomebrew/builder:latest".to_owned(),
+            build_as_root,
         })
     }
 }
