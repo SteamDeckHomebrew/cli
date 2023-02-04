@@ -152,11 +152,11 @@ impl Builder {
         Ok(())
     }
 
-    fn validate_tmp_output_root(tmp_output_root: &PathBuf) -> Result<&PathBuf> {
-        Ok(tmp_output_root).and_then(|path| {
+    fn validate_tmp_build_root(tmp_build_root: &PathBuf) -> Result<&PathBuf> {
+        Ok(tmp_build_root).and_then(|path| {
             path.is_absolute().as_result(
                 path,
-                anyhow!("For safety reasons, tmp_output_root must be an absolute path"),
+                anyhow!("For safety reasons, tmp_build_root must be an absolute path"),
             )
         })
     }
@@ -178,13 +178,13 @@ impl Builder {
     pub fn new(
         plugin_root: PathBuf,
         output_root: PathBuf,
-        tmp_output_root: PathBuf,
+        tmp_build_root: PathBuf,
     ) -> Result<Self> {
         if !output_root.exists() {
             std::fs::create_dir(&output_root)?;
         }
 
-        Builder::validate_tmp_output_root(&tmp_output_root).unwrap();
+        Builder::validate_tmp_build_root(&tmp_build_root).unwrap();
 
         Ok(Self {
             plugin: Plugin::new(plugin_root.clone()).expect("Could not create plugin"),
@@ -194,7 +194,7 @@ impl Builder {
             output_root: output_root
                 .canonicalize()
                 .expect("Could not find output root"),
-            tmp_build_root: tmp_output_root,
+            tmp_build_root,
             docker_image: "ghcr.io/steamdeckhomebrew/builder:latest".to_owned(),
         })
     }
