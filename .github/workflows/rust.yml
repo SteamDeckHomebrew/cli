@@ -12,15 +12,29 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v3
 
       - name: Build
-        run: cargo build --release
+        id: build
+        run: |
+          cargo build --release
+          version=$(target/release/decky --version)
+          echo "version=$version" >> $GITHUB_OUTPUT
 
       - name: Upload binary
         uses: actions/upload-artifact@v3.1.2
         with:
           name: decky
           path: target/release/decky
+
+      - uses: ncipollo/release-action@v1
+        with:
+          artifacts: "target/release/decky"
+          skipIfReleaseExists: true
+          prerelease: true
+          artifactErrorsFailBuild: true
+          artifactContentType: "application/octet-stream"
+          tag: ${{ steps.build.outputs.version }}
