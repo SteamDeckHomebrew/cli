@@ -55,7 +55,7 @@ impl Builder {
             CustomBackend::Dockerfile => {
                 image_tag = docker::build_image(
                     self.plugin_root.join("backend").join("Dockerfile"),
-                    self.plugin.meta.name.to_lowercase().clone(),
+                    self.plugin.meta.name.to_ascii_lowercase().replace(" ", "-"),
                 )
                 .await?
                 .clone();

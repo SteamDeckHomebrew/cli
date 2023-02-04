@@ -4,3 +4,6 @@
 [submodule "test/decky-wine-manager"]
 	path = test/decky-wine-manager
 	url = git@github.com:SkyLeite/decky-wine-manager.git
+[submodule "test/ControllerTools"]
+	path = test/ControllerTools
+	url = https://github.com/alphamercury/ControllerTools
