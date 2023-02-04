@@ -4,7 +4,7 @@ use log::info;
 use std::{
     fs::File,
     io::{Read, Write},
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 use walkdir::WalkDir;
 use zip::{write::FileOptions, ZipWriter};
@@ -86,7 +86,9 @@ impl Builder {
         let mut buffer = Vec::new();
 
         dbg!(&path);
-        let name = path.strip_prefix(&self.tmp_output_root).unwrap();
+        let name = path
+            .strip_prefix(&self.tmp_output_root)
+            .and_then(|name| name.strip_prefix("defaults").or(Ok(name)))?;
 
         if path.is_file() {
             let mut f = std::fs::File::open(&path)?;
@@ -109,7 +111,7 @@ impl Builder {
             .expect("Could not create zip file");
         let mut zip = zip::ZipWriter::new(file);
 
-        let directories = vec![("bin", false), ("dist", true)];
+        let directories = vec![("dist", true), ("bin", false), ("defaults", false)];
         let files = vec![
             "LICENSE",
             "main.py",
