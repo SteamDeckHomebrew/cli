@@ -107,7 +107,8 @@ impl Builder {
 
     pub fn zip_plugin(&self) -> Result<()> {
         info!("Zipping plugin");
-        let file = std::fs::File::create(&self.output_root.join("out.zip"))
+        let filename = format!("{}.zip", &self.plugin.meta.name);
+        let file = std::fs::File::create(&self.output_root.join(filename))
             .expect("Could not create zip file");
         let mut zip = zip::ZipWriter::new(file);
 
