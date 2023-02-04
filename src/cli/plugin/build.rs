@@ -85,7 +85,6 @@ impl Builder {
     fn zip_path(&self, path: PathBuf, zip: &mut ZipWriter<File>) -> Result<()> {
         let mut buffer = Vec::new();
 
-        dbg!(&path);
         let name = path
             .strip_prefix(&self.tmp_output_root)
             .and_then(|name| name.strip_prefix("defaults").or(Ok(name)))?;
