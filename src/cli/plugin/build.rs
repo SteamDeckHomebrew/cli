@@ -4,7 +4,7 @@ use log::info;
 use std::{
     fs::File,
     io::{Read, Write},
-    path::PathBuf,
+    path::{Path, PathBuf},
 };
 use walkdir::WalkDir;
 use zip::{write::FileOptions, ZipWriter};
@@ -87,7 +87,13 @@ impl Builder {
 
         let name = path
             .strip_prefix(&self.tmp_build_root)
-            .and_then(|name| name.strip_prefix("defaults").or(Ok(name)))?;
+            .map(|name| name.to_path_buf())
+            .and_then(|name| {
+                name.strip_prefix("defaults")
+                    .map(|path| path.to_path_buf())
+                    .or(Ok(name))
+            })
+            .map(|name| Path::new(&self.plugin.meta.name).join(name))?;
 
         if path.is_file() {
             let mut f = std::fs::File::open(&path)?;
@@ -158,7 +164,7 @@ impl Builder {
     pub async fn run(&mut self) -> Result<()> {
         info!("Creating temporary build directory");
         std::fs::remove_dir_all(&self.tmp_build_root).ok();
-        std::fs::create_dir(&self.tmp_build_root)
+        std::fs::create_dir_all(&self.tmp_build_root)
             .context("Temporary build directory already exists")?;
 
         info!("Building plugin");
