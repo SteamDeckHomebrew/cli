@@ -21,7 +21,7 @@ jobs:
         id: build
         run: |
           cargo build --release
-          version=$(target/release/decky --version)
+          version=$(target/release/decky --version | cut -d " " -f 2)
           echo "version=$version" >> $GITHUB_OUTPUT
 
       - name: Upload binary
