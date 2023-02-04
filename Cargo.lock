@@ -312,6 +312,7 @@ dependencies = [
  "clap",
  "flexi_logger",
  "futures",
+ "glob",
  "log",
  "serde",
  "serde_json",

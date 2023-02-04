@@ -11,6 +11,7 @@ boolinator = "2.4.0"
 clap = { version = "4.1.4", features = ["derive"] }
 flexi_logger = "0.24"
 futures = "0.3.25"
+glob = "0.3.1"
 log = "0.4"
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = "1.0.91"

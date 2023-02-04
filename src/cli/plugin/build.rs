@@ -2,11 +2,12 @@ use anyhow::{anyhow, Context, Result};
 use boolinator::Boolinator;
 use log::info;
 use std::{
+    fs::File,
     io::{Read, Write},
     path::{Path, PathBuf},
 };
 use walkdir::WalkDir;
-use zip::write::FileOptions;
+use zip::{write::FileOptions, ZipWriter};
 
 use crate::{
     docker,
@@ -76,14 +77,32 @@ impl Builder {
         .await
     }
 
+    fn zip_path(&self, path: PathBuf, zip: &mut ZipWriter<File>) -> Result<()> {
+        let mut buffer = Vec::new();
+
+        dbg!(&path);
+        let name = path.strip_prefix(&self.tmp_output_root).unwrap();
+
+        if path.is_file() {
+            let mut f = std::fs::File::open(&path)?;
+            f.read_to_end(&mut buffer)?;
+
+            zip.start_file(name.to_str().unwrap(), FileOptions::default())?;
+
+            zip.write(&*buffer)?;
+            buffer.clear();
+        } else if !name.as_os_str().is_empty() {
+            zip.add_directory(name.to_str().unwrap(), FileOptions::default())?;
+        }
+
+        Ok(())
+    }
+
     pub fn zip_plugin(&self) -> Result<()> {
         info!("Zipping plugin");
         let file = std::fs::File::create(&self.output_root.join("out.zip"))
             .expect("Could not create zip file");
         let mut zip = zip::ZipWriter::new(file);
-        let mut buffer = Vec::new();
-
-        let tmp_output_directory = WalkDir::new(&self.tmp_output_root);
 
         let directories = vec!["bin", "dist"];
         let files = vec![
@@ -94,22 +113,18 @@ impl Builder {
             "README.md",
         ];
 
-        for entry in tmp_output_directory {
-            let file = entry?;
-            let path = file.path();
-            let name = path.strip_prefix(&self.tmp_output_root).unwrap();
+        for file in files {
+            let full_path = self.tmp_output_root.join(&file);
+            self.zip_path(full_path, &mut zip)?;
+        }
 
-            if path.is_file() {
-                let mut f = std::fs::File::open(path)?;
-                f.read_to_end(&mut buffer)?;
+        for directory in directories {
+            let full_path = self.tmp_output_root.join(&directory);
+            let dir_entries = WalkDir::new(full_path);
 
-                zip.start_file(name.to_str().unwrap(), FileOptions::default())?;
-
-                zip.write(&*buffer)?;
-                buffer.clear();
-            } else if !name.as_os_str().is_empty() && directories.contains(&name.to_str().unwrap())
-            {
-                zip.add_directory(name.to_str().unwrap(), FileOptions::default())?;
+            for entry in dir_entries {
+                let file = entry?;
+                self.zip_path(file.path().to_path_buf(), &mut zip)?;
             }
         }
 
