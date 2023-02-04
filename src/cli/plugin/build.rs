@@ -20,7 +20,7 @@ pub struct Builder {
     pub plugin: Plugin,
     pub plugin_root: PathBuf,
     pub output_root: PathBuf,
-    pub tmp_output_root: PathBuf,
+    pub tmp_build_root: PathBuf,
 }
 
 impl Builder {
@@ -34,7 +34,7 @@ impl Builder {
                     self.plugin_root.canonicalize()?.to_str().unwrap().into(),
                     "/plugin".into(),
                 ),
-                (self.tmp_output_root.to_str().unwrap().into(), "/out".into()),
+                (self.tmp_build_root.to_str().unwrap().into(), "/out".into()),
             ],
         )
         .await
@@ -74,7 +74,7 @@ impl Builder {
                     "/backend".into(),
                 ),
                 (
-                    self.tmp_output_root.join("bin").to_str().unwrap().into(),
+                    self.tmp_build_root.join("bin").to_str().unwrap().into(),
                     "/backend/out".into(),
                 ),
             ],
@@ -86,7 +86,7 @@ impl Builder {
         let mut buffer = Vec::new();
 
         let name = path
-            .strip_prefix(&self.tmp_output_root)
+            .strip_prefix(&self.tmp_build_root)
             .and_then(|name| name.strip_prefix("defaults").or(Ok(name)))?;
 
         if path.is_file() {
@@ -121,12 +121,12 @@ impl Builder {
         ];
 
         for file in files {
-            let full_path = self.tmp_output_root.join(&file);
+            let full_path = self.tmp_build_root.join(&file);
             self.zip_path(full_path, &mut zip)?;
         }
 
         for directory in directories {
-            let full_path = self.tmp_output_root.join(&directory.0);
+            let full_path = self.tmp_build_root.join(&directory.0);
 
             if directory.1 == false && !full_path.exists() {
                 info!("Optional directory {} not found. Continuing", &directory.0);
@@ -157,8 +157,8 @@ impl Builder {
 
     pub async fn run(&mut self) -> Result<()> {
         info!("Creating temporary build directory");
-        std::fs::remove_dir_all(&self.tmp_output_root).ok();
-        std::fs::create_dir(&self.tmp_output_root)
+        std::fs::remove_dir_all(&self.tmp_build_root).ok();
+        std::fs::create_dir(&self.tmp_build_root)
             .context("Temporary build directory already exists")?;
 
         info!("Building plugin");
@@ -188,7 +188,7 @@ impl Builder {
             output_root: output_root
                 .canonicalize()
                 .expect("Could not find output root"),
-            tmp_output_root,
+            tmp_build_root: tmp_output_root,
             docker_image: "ghcr.io/steamdeckhomebrew/builder:latest".to_owned(),
         })
     }
