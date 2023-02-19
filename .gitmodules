@@ -7,3 +7,6 @@
 [submodule "test/ControllerTools"]
 	path = test/ControllerTools
 	url = https://github.com/alphamercury/ControllerTools
+[submodule "test/radiyo-steam-deck"]
+	path = test/radiyo-steam-deck
+	url = https://github.com/isiah-lloyd/radiyo-steam-deck
