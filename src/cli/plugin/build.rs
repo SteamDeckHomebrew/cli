@@ -10,6 +10,7 @@ use walkdir::WalkDir;
 use zip::{write::FileOptions, ZipWriter};
 
 use crate::{
+    cli::FilenameSource,
     docker,
     plugin::{CustomBackend, Plugin},
 };
@@ -22,6 +23,7 @@ pub struct Builder {
     pub output_root: PathBuf,
     pub tmp_build_root: PathBuf,
     pub build_as_root: bool,
+    pub output_filename_source: FilenameSource,
 }
 
 impl Builder {
@@ -115,7 +117,15 @@ impl Builder {
 
     pub fn zip_plugin(&self) -> Result<()> {
         info!("Zipping plugin");
-        let filename = format!("{}.zip", &self.plugin.meta.name);
+        let filename = match &self.output_filename_source {
+            FilenameSource::PluginName => format!("{}.zip", &self.plugin.meta.name),
+            FilenameSource::Directory => {
+                format!(
+                    "{}.zip",
+                    &self.plugin_root.file_name().unwrap().to_string_lossy()
+                )
+            }
+        };
         let file = std::fs::File::create(&self.output_root.join(filename))
             .expect("Could not create zip file");
         let mut zip = zip::ZipWriter::new(file);
@@ -183,6 +193,7 @@ impl Builder {
         output_root: PathBuf,
         tmp_build_root: PathBuf,
         build_as_root: bool,
+        output_filename_source: FilenameSource,
     ) -> Result<Self> {
         if !output_root.exists() {
             std::fs::create_dir(&output_root)?;
@@ -201,6 +212,7 @@ impl Builder {
             tmp_build_root,
             docker_image: "ghcr.io/steamdeckhomebrew/builder:latest".to_owned(),
             build_as_root,
+            output_filename_source,
         })
     }
 }

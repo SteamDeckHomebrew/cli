@@ -22,6 +22,12 @@ pub struct PluginCLI {
     command: PluginCommand,
 }
 
+#[derive(clap::ValueEnum, Clone)]
+pub enum FilenameSource {
+    PluginName,
+    Directory,
+}
+
 #[derive(Subcommand)]
 pub enum PluginCommand {
     Build {
@@ -36,6 +42,9 @@ pub enum PluginCommand {
 
         #[arg(short, long, default_value = "false")]
         build_as_root: bool,
+
+        #[arg(short = 's', long, value_enum, default_value = "plugin-name")]
+        output_filename_source: FilenameSource,
     },
     New,
     Deploy,
