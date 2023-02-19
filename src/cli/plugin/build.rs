@@ -87,7 +87,7 @@ impl Builder {
         .await
     }
 
-    fn zip_path(&self, path: PathBuf, zip: &mut ZipWriter<File>) -> Result<()> {
+    fn zip_path(&self, filename: &str, path: PathBuf, zip: &mut ZipWriter<File>) -> Result<()> {
         let mut buffer = Vec::new();
 
         let name = path
@@ -98,7 +98,7 @@ impl Builder {
                     .map(|path| path.to_path_buf())
                     .or(Ok(name))
             })
-            .map(|name| Path::new(&self.plugin.meta.name).join(name))?;
+            .map(|name| Path::new(filename).join(name))?;
 
         if path.is_file() {
             let mut f = std::fs::File::open(&path)?;
@@ -117,16 +117,17 @@ impl Builder {
 
     pub fn zip_plugin(&self) -> Result<()> {
         info!("Zipping plugin");
-        let filename = match &self.output_filename_source {
-            FilenameSource::PluginName => format!("{}.zip", &self.plugin.meta.name),
-            FilenameSource::Directory => {
-                format!(
-                    "{}.zip",
-                    &self.plugin_root.file_name().unwrap().to_string_lossy()
-                )
-            }
+        let filename: String = match &self.output_filename_source {
+            FilenameSource::PluginName => self.plugin.meta.name.clone(),
+            FilenameSource::Directory => self
+                .plugin_root
+                .file_name()
+                .unwrap()
+                .to_string_lossy()
+                .to_string(),
         };
-        let file = std::fs::File::create(&self.output_root.join(filename))
+        let zip_filename = format!("{}.zip", &filename);
+        let file = std::fs::File::create(&self.output_root.join(zip_filename))
             .expect("Could not create zip file");
         let mut zip = zip::ZipWriter::new(file);
 
@@ -141,7 +142,7 @@ impl Builder {
 
         for file in files {
             let full_path = self.tmp_build_root.join(&file);
-            self.zip_path(full_path, &mut zip)?;
+            self.zip_path(&filename, full_path, &mut zip)?;
         }
 
         for directory in directories {
@@ -156,7 +157,7 @@ impl Builder {
 
             for entry in dir_entries {
                 let file = entry?;
-                self.zip_path(file.path().to_path_buf(), &mut zip)?;
+                self.zip_path(&filename, file.path().to_path_buf(), &mut zip)?;
             }
         }
 
