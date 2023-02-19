@@ -1,6 +1,7 @@
 use anyhow::{anyhow, Context, Result};
 use boolinator::Boolinator;
 use log::info;
+use rand::distributions::{Alphanumeric, DistString};
 use std::{
     fs::File,
     io::{Read, Write},
@@ -202,6 +203,8 @@ impl Builder {
 
         Builder::validate_tmp_build_root(&tmp_build_root).unwrap();
 
+        let output_random_padding: String = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
+
         Ok(Self {
             plugin: Plugin::new(plugin_root.clone()).expect("Could not create plugin"),
             plugin_root: plugin_root
@@ -210,7 +213,7 @@ impl Builder {
             output_root: output_root
                 .canonicalize()
                 .expect("Could not find output root"),
-            tmp_build_root,
+            tmp_build_root: tmp_build_root.join(output_random_padding),
             docker_image: "ghcr.io/steamdeckhomebrew/builder:latest".to_owned(),
             build_as_root,
             output_filename_source,
