@@ -4,7 +4,7 @@ use log::info;
 use rand::distributions::{Alphanumeric, DistString};
 use std::{
     fs::File,
-    io::{Read, Write},
+    io::Write,
     path::{Path, PathBuf},
 };
 use walkdir::WalkDir;
@@ -89,8 +89,6 @@ impl Builder {
     }
 
     fn zip_path(&self, filename: &str, path: PathBuf, zip: &mut ZipWriter<File>) -> Result<()> {
-        let mut buffer = Vec::new();
-
         let name = path
             .strip_prefix(&self.tmp_build_root)
             .map(|name| name.to_path_buf())
@@ -102,13 +100,11 @@ impl Builder {
             .map(|name| Path::new(filename).join(name))?;
 
         if path.is_file() {
-            let mut f = std::fs::File::open(&path)?;
-            f.read_to_end(&mut buffer)?;
+            let bytes = std::fs::read(&path).unwrap();
 
             zip.start_file(name.to_str().unwrap(), FileOptions::default())?;
 
-            zip.write(&*buffer)?;
-            buffer.clear();
+            zip.write_all(&bytes)?;
         } else if !name.as_os_str().is_empty() {
             zip.add_directory(name.to_str().unwrap(), FileOptions::default())?;
         }
