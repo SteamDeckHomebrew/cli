@@ -99,6 +99,8 @@ impl Builder {
             })
             .map(|name| Path::new(filename).join(name))?;
 
+        info!("Zipping {:?}", name);
+
         if path.is_file() {
             let bytes = std::fs::read(&path).unwrap();
 
