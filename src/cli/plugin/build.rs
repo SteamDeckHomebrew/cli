@@ -181,9 +181,13 @@ impl Builder {
             .context("Temporary build directory already exists")?;
 
         info!("Building plugin");
-        self.build_backend().await?;
-        self.build_frontend().await?;
-        self.zip_plugin()?;
+        self.build_backend().await.context(
+            "Failed to build backend. There might be more information in the output above.",
+        )?;
+        self.build_frontend().await.context(
+            "Failed to build frontend. There might be more information in the output above.",
+        )?;
+        self.zip_plugin().context("Failed to zip plugin.")?;
 
         Ok(())
     }
