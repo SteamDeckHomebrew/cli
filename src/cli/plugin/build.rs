@@ -1,5 +1,7 @@
 use anyhow::{anyhow, Context, Result};
 use boolinator::Boolinator;
+use glob::glob;
+use itertools::Itertools;
 use log::info;
 use rand::distributions::{Alphanumeric, DistString};
 use std::{
@@ -131,13 +133,28 @@ impl Builder {
         let mut zip = zip::ZipWriter::new(file);
 
         let directories = vec![("dist", true), ("bin", false), ("defaults", false)];
-        let files = vec![
+        let expected_files = vec![
             "LICENSE",
             "main.py",
             "package.json",
             "plugin.json",
             "README.md",
-        ];
+        ]
+        .into_iter()
+        .map(|f| f.to_string());
+
+        let python_files = glob(&format!("{}/*.py", self.tmp_build_root.to_string_lossy()))
+            .unwrap()
+            .map(|f| {
+                f.unwrap()
+                    .file_name()
+                    .unwrap()
+                    .to_string_lossy()
+                    .to_string()
+            })
+            .into_iter();
+
+        let files = expected_files.chain(python_files).unique();
 
         for file in files {
             let full_path = self.tmp_build_root.join(&file);
