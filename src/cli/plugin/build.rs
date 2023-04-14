@@ -90,7 +90,7 @@ impl Builder {
         .await
     }
 
-    fn zip_path(&self, filename: &str, path: PathBuf, zip: &mut ZipWriter<File>) -> Result<()> {
+    fn zip_path(&self, filename: &str, path: PathBuf, zip: &mut ZipWriter<File>, perms: FileOptions) -> Result<()> {
         let name = path
             .strip_prefix(&self.tmp_build_root)
             .map(|name| name.to_path_buf())
@@ -106,11 +106,11 @@ impl Builder {
         if path.is_file() {
             let bytes = std::fs::read(&path).unwrap();
 
-            zip.start_file(name.to_str().unwrap(), FileOptions::default())?;
+            zip.start_file(name.to_str().unwrap(), perms)?;
 
             zip.write_all(&bytes)?;
         } else if !name.as_os_str().is_empty() {
-            zip.add_directory(name.to_str().unwrap(), FileOptions::default())?;
+            zip.add_directory(name.to_str().unwrap(), perms)?;
         }
 
         Ok(())
@@ -132,7 +132,19 @@ impl Builder {
             .expect("Could not create zip file");
         let mut zip = zip::ZipWriter::new(file);
 
-        let directories = vec![("dist", true), ("bin", false), ("defaults", false)];
+        /// Directory that needs to be zipped
+        struct DirDirective<'a> {
+            path: &'a str,
+            mandatory: bool,
+            permissions: FileOptions,
+        }
+
+        let directories = vec![
+            DirDirective { path: "dist", mandatory: true, permissions: FileOptions::default() },
+            DirDirective { path: "bin", mandatory: false, permissions: FileOptions::default().unix_permissions(0o755)},
+            DirDirective { path: "defaults", mandatory: false, permissions: FileOptions::default()},
+        ];
+
         let expected_files = vec![
             "LICENSE",
             "main.py",
@@ -158,14 +170,14 @@ impl Builder {
 
         for file in files {
             let full_path = self.tmp_build_root.join(&file);
-            self.zip_path(&filename, full_path, &mut zip)?;
+            self.zip_path(&filename, full_path, &mut zip, Default::default())?;
         }
 
         for directory in directories {
-            let full_path = self.tmp_build_root.join(&directory.0);
+            let full_path = self.tmp_build_root.join(&directory.path);
 
-            if directory.1 == false && !full_path.exists() {
-                info!("Optional directory {} not found. Continuing", &directory.0);
+            if directory.mandatory == false && !full_path.exists() {
+                info!("Optional directory {} not found. Continuing", &directory.path);
                 continue;
             }
 
@@ -173,7 +185,7 @@ impl Builder {
 
             for entry in dir_entries {
                 let file = entry?;
-                self.zip_path(&filename, file.path().to_path_buf(), &mut zip)?;
+                self.zip_path(&filename, file.path().to_path_buf(), &mut zip, directory.permissions)?;
             }
         }
 
