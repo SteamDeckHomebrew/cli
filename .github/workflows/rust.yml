@@ -11,6 +11,17 @@ on:
         description: 'Release as Prerelease'
         required: true
         type: boolean
+        default: false
+      bumpByType:
+        description: 'Bump by semver patch type'
+        required: false
+        type: choice
+        options:
+          - none
+          - patch
+          - minor
+          - major
+        default: 'none'
 
 env:
   CARGO_TERM_COLOR: always
