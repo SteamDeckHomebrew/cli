@@ -1,10 +1,11 @@
-use anyhow::Result;
+use anyhow::{Context, Ok, Result};
 use std::{path::PathBuf, process::Stdio};
 use tokio::{
     io::{AsyncBufReadExt, BufReader},
     process::Command,
 };
 use users::{get_effective_gid, get_effective_uid};
+use which::which;
 
 async fn run_command(cmd: &mut Command) -> Result<()> {
     cmd.stdout(Stdio::piped());
@@ -34,6 +35,20 @@ async fn run_command(cmd: &mut Command) -> Result<()> {
     }
 
     Ok(())
+}
+
+pub fn ensure_availability() -> Result<()> {
+    which("docker")
+        .map(|_| Ok(()))
+        .context("`docker` program not found. Make sure it is installed and in your $PATH. For more information visit https://docs.docker.com/desktop/troubleshoot/overview/")
+        .and_then(|_| {
+                std::process::Command::new("docker")
+                    .arg("ps")
+                    .status()
+                    .context("Error while checking for Docker availability. Please run `docker ps` in your terminal and fix any errors that show up.")
+            }
+        )
+        .map(|exit_status| exit_status.exit_ok().context("Docker is installed but doesn't seem to be available! Is the daemon running? For more information visit https://docs.docker.com/desktop/troubleshoot/overview/"))?
 }
 
 // docker build -f $PWD/backend/Dockerfile -t "$docker_name" .

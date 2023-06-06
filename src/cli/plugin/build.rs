@@ -232,6 +232,8 @@ impl Builder {
             std::fs::create_dir(&output_root)?;
         }
 
+        docker::ensure_availability()?;
+
         Builder::validate_tmp_build_root(&tmp_build_root).unwrap();
 
         let output_random_padding: String = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);

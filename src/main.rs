@@ -1,3 +1,4 @@
+#![feature(exit_status_error)]
 mod cli;
 mod docker;
 mod plugin;
