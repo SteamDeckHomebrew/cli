@@ -23,6 +23,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Install latest Rust nightly
+        uses: actions-rs/toolchain@v1
+        with:
+            toolchain: nightly
+            default: true
+            override: true
+            components: rustfmt, clippy
+
       - name: Build
         id: build
         run: |
