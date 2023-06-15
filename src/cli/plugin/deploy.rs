@@ -1,5 +1,4 @@
 use std::env::home_dir;
-use std::fs;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
@@ -7,13 +6,11 @@ use anyhow::Result;
 use log::info;
 use rand::distributions::{Alphanumeric, DistString};
 
-use crate::{
-    cli::FilenameSource,
-    plugin::Plugin,
-};
 use crate::cli::plugin::build::Builder;
 use crate::plugin::DeckFile;
+use crate::{cli::FilenameSource, plugin::Plugin};
 
+#[derive(Clone)]
 pub struct Deployer {
     builder: Builder,
 
@@ -28,7 +25,6 @@ pub struct Deployer {
 }
 
 impl Deployer {
-
     pub async fn create_folders(&mut self, deck: DeckFile) -> Result<()> {
         info!("Creating folders");
         Command::new("ssh")
@@ -36,8 +32,13 @@ impl Deployer {
                 format!("deck@{}", deck.deckip),
                 "-p".to_string(),
                 format!("{}", deck.deckport),
-                "-i".to_string(),
-                format!("{}", deck.deckkey.replace("-i ", "").replace("$HOME", &*home_dir().unwrap().to_string_lossy())),
+                format!("{}", if deck.deckkey.contains("-i ") { "-i" } else { "" }),
+                format!("{}", if deck.deckkey.contains("-i ") {
+                    deck.deckkey
+                    .replace("-i ", "")
+                    .replace("$HOME", &*home_dir().unwrap().to_string_lossy())
+                    .replace("${env:HOME}", &*home_dir().unwrap().to_string_lossy())
+                } else {"".to_string()}),
                 format!("mkdir -p {deckdir}/homebrew/pluginloader && mkdir -p {deckdir}/homebrew/plugins", deckdir = deck.deckdir),
             ])
             .stdout(Stdio::inherit())
@@ -54,9 +55,17 @@ impl Deployer {
                 format!("deck@{}", deck.deckip),
                 "-p".to_string(),
                 format!("{}", deck.deckport),
-                "-i".to_string(),
-                format!("{}", deck.deckkey.replace("-i ", "").replace("$HOME", &*home_dir().unwrap().to_string_lossy())),
-                format!("echo '{}' | sudo -S chmod -R ug+rw {}/homebrew/", deck.deckpass, deck.deckdir)
+                format!("{}", if deck.deckkey.contains("-i ") { "-i" } else { "" }),
+                format!("{}", if deck.deckkey.contains("-i ") {
+                    deck.deckkey
+                        .replace("-i ", "")
+                        .replace("$HOME", &*home_dir().unwrap().to_string_lossy())
+                        .replace("${env:HOME}", &*home_dir().unwrap().to_string_lossy())
+                } else {"".to_string()}),
+                format!(
+                    "echo '{}' | sudo -S chmod -R ug+rw {}/homebrew/",
+                    deck.deckpass, deck.deckdir
+                ),
             ])
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
@@ -74,8 +83,11 @@ impl Deployer {
                 "--delete".to_string(),
                 "--chmod=D0755,F0755".to_string(),
                 // format!("--rsh='ssh -p {} {}'", deck.deckport, deck.deckkey.replace("$HOME", &*home_dir().unwrap().to_string_lossy())),
-                self.tmp_build_root.join(filename).to_string_lossy().to_string(),
-                format!("deck@{}:{}/homebrew/plugins", deck.deckip, deck.deckdir)
+                self.tmp_build_root
+                    .join(filename)
+                    .to_string_lossy()
+                    .to_string(),
+                format!("deck@{}:{}/homebrew/plugins", deck.deckip, deck.deckdir),
             ])
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
@@ -92,9 +104,17 @@ impl Deployer {
                 format!("deck@{}", deck.deckip),
                 "-p".to_string(),
                 format!("{}", deck.deckport),
-                "-i".to_string(),
-                format!("{}", deck.deckkey.replace("-i ", "").replace("$HOME", &*home_dir().unwrap().to_string_lossy())),
-                format!("echo '{}' | sudo -S systemctl restart plugin_loader.service", deck.deckpass)
+                format!("{}", if deck.deckkey.contains("-i ") { "-i" } else { "" }),
+                format!("{}", if deck.deckkey.contains("-i ") {
+                    deck.deckkey
+                        .replace("-i ", "")
+                        .replace("$HOME", &*home_dir().unwrap().to_string_lossy())
+                        .replace("${env:HOME}", &*home_dir().unwrap().to_string_lossy())
+                } else {"".to_string()}),
+                format!(
+                    "echo '{}' | sudo -S systemctl restart plugin_loader.service",
+                    deck.deckpass
+                ),
             ])
             .stdout(Stdio::inherit())
             .stderr(Stdio::inherit())
@@ -105,11 +125,12 @@ impl Deployer {
 
     pub async fn run(&mut self) -> Result<()> {
         let mut deck: DeckFile;
-        if self.deck_ip.is_some() &&
-            self.deck_port.is_some() &&
-            self.deck_pass.is_some() &&
-            self.deck_key.is_some() &&
-            self.deck_dir.is_some() {
+        if self.deck_ip.is_some()
+            && self.deck_port.is_some()
+            && self.deck_pass.is_some()
+            && self.deck_key.is_some()
+            && self.deck_dir.is_some()
+        {
             deck = DeckFile {
                 deckip: self.deck_ip.clone().unwrap(),
                 deckport: self.deck_port.clone().unwrap(),
@@ -118,7 +139,7 @@ impl Deployer {
                 deckdir: self.deck_dir.clone().unwrap(),
             };
         } else {
-            deck = self.plugin.deck.as_mut().unwrap().clone();
+            deck = self.plugin.deck.clone();
             if self.deck_ip.is_some() {
                 deck.deckip = self.deck_ip.clone().unwrap();
             }
@@ -139,7 +160,7 @@ impl Deployer {
         self.builder.run().await.unwrap();
 
         std::fs::remove_dir_all(&self.tmp_build_root).ok();
-        std::fs::create_dir_all(&self.tmp_build_root);
+        std::fs::create_dir_all(&self.tmp_build_root).ok();
 
         let filename: String = match &self.builder.output_filename_source {
             FilenameSource::PluginName => self.plugin.meta.name.clone(),
@@ -174,6 +195,7 @@ impl Deployer {
         output_root: PathBuf,
         tmp_build_root: PathBuf,
         build_as_root: bool,
+        build_with_dev: bool,
         output_filename_source: FilenameSource,
         deck_ip: Option<String>,
         deck_port: Option<String>,
@@ -181,12 +203,20 @@ impl Deployer {
         deck_key: Option<String>,
         deck_dir: Option<String>,
     ) -> Result<Self> {
-
         let output_random_padding: String = Alphanumeric.sample_string(&mut rand::thread_rng(), 16);
 
+        let builder: Builder = Builder::new(
+            plugin_root.clone(),
+            output_root,
+            tmp_build_root.clone(),
+            build_as_root,
+            build_with_dev,
+            output_filename_source,
+        ).expect("Could not create builder");
+
         Ok(Self {
-            builder: Builder::new(plugin_root.clone(), output_root, tmp_build_root.clone(), build_as_root, output_filename_source).expect("Could not create builder"),
-            plugin: Plugin::new(plugin_root.clone()).expect("Could not create plugin"),
+            builder: builder.clone(),
+            plugin: builder.plugin.clone(),
             plugin_root,
             tmp_build_root: tmp_build_root.join(output_random_padding),
             deck_ip,

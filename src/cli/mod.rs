@@ -43,6 +43,9 @@ pub enum PluginCommand {
         #[arg(short, long, default_value = "false")]
         build_as_root: bool,
 
+        #[arg(short = 'd', long, default_value = "false")]
+        build_with_dev: bool,
+
         #[arg(short = 's', long, value_enum, default_value = "plugin-name")]
         output_filename_source: FilenameSource,
     },
@@ -60,6 +63,9 @@ pub enum PluginCommand {
         #[arg(short, long, default_value = "false")]
         build_as_root: bool,
 
+        #[arg(short = 'd', long, default_value = "false")]
+        build_with_dev: bool,
+
         #[arg(short = 's', long, value_enum, default_value = "plugin-name")]
         output_filename_source: FilenameSource,
 
@@ -75,7 +81,7 @@ pub enum PluginCommand {
         #[arg(short = 'k', long)]
         deck_key: Option<String>,
 
-        #[arg(short = 'd', long)]
+        #[arg(short = 'c', long)]
         deck_dir: Option<String>,
     },
 }
