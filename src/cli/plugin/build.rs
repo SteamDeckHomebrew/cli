@@ -137,7 +137,7 @@ impl Builder {
                 .to_string_lossy()
                 .to_string(),
         };
-        let zip_filename = format!("{}.zip", &filename);
+        let zip_filename = format!("{}{}.zip", &filename, if self.build_with_dev { "-dev".to_string() } else { "".to_string() });
         let file = std::fs::File::create(&self.output_root.join(zip_filename))
             .expect("Could not create zip file");
         let mut zip = zip::ZipWriter::new(file);

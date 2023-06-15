@@ -171,7 +171,7 @@ impl Deployer {
                 .to_string_lossy()
                 .to_string(),
         };
-        let zip_filename = format!("{}.zip", &filename);
+        let zip_filename = format!("{}{}.zip", &filename, if self.builder.build_with_dev { "-dev".to_string() } else { "".to_string() });
         let file = std::fs::File::open(&self.builder.output_root.join(zip_filename))
             .expect("Could not open zip file");
         let mut zip = zip::ZipArchive::new(file).unwrap();
