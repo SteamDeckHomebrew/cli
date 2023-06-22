@@ -43,9 +43,45 @@ pub enum PluginCommand {
         #[arg(short, long, default_value = "false")]
         build_as_root: bool,
 
+        #[arg(short = 'd', long, default_value = "false")]
+        build_with_dev: bool,
+
         #[arg(short = 's', long, value_enum, default_value = "plugin-name")]
         output_filename_source: FilenameSource,
     },
     New,
-    Deploy,
+    Deploy {
+        #[arg(default_value = "./")]
+        plugin_path: PathBuf,
+
+        #[arg(short, long, default_value = "./out")]
+        output_path: PathBuf,
+
+        #[arg(short, long, default_value = "/tmp/decky")]
+        tmp_output_path: PathBuf,
+
+        #[arg(short, long, default_value = "false")]
+        build_as_root: bool,
+
+        #[arg(short = 'd', long, default_value = "false")]
+        build_with_dev: bool,
+
+        #[arg(short = 's', long, value_enum, default_value = "plugin-name")]
+        output_filename_source: FilenameSource,
+
+        #[arg(short = 'i', long)]
+        deck_ip: Option<String>,
+
+        #[arg(short = 'p', long)]
+        deck_port: Option<String>,
+
+        #[arg(short = 'x', long)]
+        deck_pass: Option<String>,
+
+        #[arg(short = 'k', long)]
+        deck_key: Option<String>,
+
+        #[arg(short = 'c', long)]
+        deck_dir: Option<String>,
+    },
 }

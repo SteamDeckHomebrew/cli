@@ -68,7 +68,7 @@ pub async fn build_image(dockerfile: PathBuf, tag: String) -> Result<String> {
 }
 
 // docker run --rm -i -v $PWD/backend:/backend -v /tmp/output/$plugin/backend/out:/backend/out --entrypoint /backend/entrypoint.sh "$docker_name"
-pub async fn run_image(tag: String, binds: Vec<(String, String)>, run_as_root: bool) -> Result<()> {
+pub async fn run_image(tag: String, binds: Vec<(String, String)>, run_as_root: bool, run_with_dev: bool) -> Result<()> {
     let mut cmd = Command::new("docker");
     let mut command_with_default_args = cmd.arg("run").arg("--rm");
 
@@ -78,6 +78,13 @@ pub async fn run_image(tag: String, binds: Vec<(String, String)>, run_as_root: b
             get_effective_uid(),
             get_effective_gid()
         ));
+    }
+
+    if run_with_dev {
+        command_with_default_args = command_with_default_args.arg("-e").arg("RELEASE_TYPE=development")
+    }
+    else {
+        command_with_default_args = command_with_default_args.arg("-e").arg("RELEASE_TYPE=production")
     }
 
     let mut dynamic_args: Vec<String> = vec![];

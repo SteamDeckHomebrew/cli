@@ -18,6 +18,7 @@ use crate::{
     plugin::{CustomBackend, Plugin},
 };
 
+#[derive(Clone)]
 pub struct Builder {
     docker_image: String,
 
@@ -26,6 +27,7 @@ pub struct Builder {
     pub output_root: PathBuf,
     pub tmp_build_root: PathBuf,
     pub build_as_root: bool,
+    pub build_with_dev: bool,
     pub output_filename_source: FilenameSource,
 }
 
@@ -42,7 +44,8 @@ impl Builder {
                 ),
                 (self.tmp_build_root.to_str().unwrap().into(), "/out".into()),
             ],
-            self.build_as_root,
+            self.build_as_root.clone(),
+            self.build_with_dev.clone(),
         )
         .await
     }
@@ -85,12 +88,19 @@ impl Builder {
                     "/backend/out".into(),
                 ),
             ],
-            self.build_as_root,
+            self.build_as_root.clone(),
+            self.build_with_dev.clone(),
         )
         .await
     }
 
-    fn zip_path(&self, filename: &str, path: PathBuf, zip: &mut ZipWriter<File>, perms: FileOptions) -> Result<()> {
+    fn zip_path(
+        &self,
+        filename: &str,
+        path: PathBuf,
+        zip: &mut ZipWriter<File>,
+        perms: FileOptions,
+    ) -> Result<()> {
         let name = path
             .strip_prefix(&self.tmp_build_root)
             .map(|name| name.to_path_buf())
@@ -127,7 +137,7 @@ impl Builder {
                 .to_string_lossy()
                 .to_string(),
         };
-        let zip_filename = format!("{}.zip", &filename);
+        let zip_filename = format!("{}{}.zip", &filename, if self.build_with_dev { "-dev".to_string() } else { "".to_string() });
         let file = std::fs::File::create(&self.output_root.join(zip_filename))
             .expect("Could not create zip file");
         let mut zip = zip::ZipWriter::new(file);
@@ -140,9 +150,21 @@ impl Builder {
         }
 
         let directories = vec![
-            DirDirective { path: "dist", mandatory: true, permissions: FileOptions::default() },
-            DirDirective { path: "bin", mandatory: false, permissions: FileOptions::default().unix_permissions(0o755)},
-            DirDirective { path: "defaults", mandatory: false, permissions: FileOptions::default()},
+            DirDirective {
+                path: "dist",
+                mandatory: true,
+                permissions: FileOptions::default(),
+            },
+            DirDirective {
+                path: "bin",
+                mandatory: false,
+                permissions: FileOptions::default().unix_permissions(0o755),
+            },
+            DirDirective {
+                path: "defaults",
+                mandatory: false,
+                permissions: FileOptions::default(),
+            },
         ];
 
         let expected_files = vec![
@@ -177,7 +199,10 @@ impl Builder {
             let full_path = self.tmp_build_root.join(&directory.path);
 
             if directory.mandatory == false && !full_path.exists() {
-                info!("Optional directory {} not found. Continuing", &directory.path);
+                info!(
+                    "Optional directory {} not found. Continuing",
+                    &directory.path
+                );
                 continue;
             }
 
@@ -185,7 +210,12 @@ impl Builder {
 
             for entry in dir_entries {
                 let file = entry?;
-                self.zip_path(&filename, file.path().to_path_buf(), &mut zip, directory.permissions)?;
+                self.zip_path(
+                    &filename,
+                    file.path().to_path_buf(),
+                    &mut zip,
+                    directory.permissions,
+                )?;
             }
         }
 
@@ -226,6 +256,7 @@ impl Builder {
         output_root: PathBuf,
         tmp_build_root: PathBuf,
         build_as_root: bool,
+        build_with_dev: bool,
         output_filename_source: FilenameSource,
     ) -> Result<Self> {
         if !output_root.exists() {
@@ -249,6 +280,7 @@ impl Builder {
             tmp_build_root: tmp_build_root.join(output_random_padding),
             docker_image: "ghcr.io/steamdeckhomebrew/builder:latest".to_owned(),
             build_as_root,
+            build_with_dev,
             output_filename_source,
         })
     }
