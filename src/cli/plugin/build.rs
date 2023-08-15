@@ -284,9 +284,7 @@ impl Builder {
                 continue;
             }
 
-            println!("Following Symlink: {} @ {}", self.follow_symlinks, full_path.display());
             let dir_entries = WalkDir::new(full_path).follow_links(self.follow_symlinks);
-
             for entry in dir_entries {
                 let file = entry?;
                 self.zip_path(
