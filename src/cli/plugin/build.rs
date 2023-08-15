@@ -5,9 +5,10 @@ use itertools::Itertools;
 use log::info;
 use rand::distributions::{Alphanumeric, DistString};
 use std::{
+    fs,
     fs::File,
     io::Write,
-    path::{Path, PathBuf},
+    path::{Path, PathBuf}, os,
 };
 use walkdir::WalkDir;
 use zip::{write::FileOptions, ZipWriter};
@@ -28,6 +29,7 @@ pub struct Builder {
     pub tmp_build_root: PathBuf,
     pub build_as_root: bool,
     pub build_with_dev: bool,
+    pub follow_symlinks: bool,
     pub output_filename_source: FilenameSource,
 }
 
@@ -92,6 +94,77 @@ impl Builder {
             self.build_with_dev.clone(),
         )
         .await
+    }
+
+    pub async fn build_py_modules(&self) -> Result<()> {
+        let source_py_modules_dir = self.plugin_root.join("py_modules");
+        let tmp_py_modules_dir = self.tmp_build_root.join("py_modules");
+
+        if !&source_py_modules_dir.exists() {
+            info!("Plugin does not have a py_modules");
+            return Ok(());
+        }
+
+        info!("Building py_modules");
+
+        // TODO: Build wheels if required
+        /*
+        docker::run_image(
+            image_tag.into(),
+            vec![
+                (
+                    source_py_modules_dir
+                        .canonicalize()?
+                        .to_str()
+                        .unwrap()
+                        .into(),
+                    "/py_modules".into(),
+                ),
+                (
+                    tmp_py_modules_dir.to_str().unwrap().into(),
+                    "/py_modules/build".into(),
+                ),
+            ],
+            self.build_as_root.clone(),
+            self.build_with_dev.clone(),
+        )
+        .await
+        */
+
+        self.copy_py_modules(source_py_modules_dir, tmp_py_modules_dir)?;
+
+        Ok(())
+    }
+
+    fn copy_py_modules(&self, src: impl AsRef<Path>, dst: impl AsRef<Path>) -> Result<()> {
+        fs::create_dir_all(&dst)?;
+
+        let src = src.as_ref();
+        let dst = dst.as_ref();
+
+        for entry in fs::read_dir(src)? {
+            let entry = entry?;
+            let file_type = entry.file_type()?;
+
+            let to = dst.join(entry.file_name());
+
+            if file_type.is_symlink() && self.follow_symlinks {
+                let original = src.join(fs::read_link(entry.path())?);
+                let original_fullpath = original.canonicalize()?;
+                
+                os::unix::fs::symlink(original_fullpath, to)?;
+            } else if file_type.is_dir() {
+                if entry.file_name() == "__pycache__" {
+                    continue;
+                }
+                
+                self.copy_py_modules(entry.path(), to)?;
+            } else if file_type.is_file() {
+                fs::copy(entry.path(), to)?;
+            }
+        }
+
+        Ok(())
     }
 
     fn zip_path(
@@ -165,6 +238,11 @@ impl Builder {
                 mandatory: false,
                 permissions: FileOptions::default(),
             },
+            DirDirective {
+                path: "py_modules",
+                mandatory: false,
+                permissions: FileOptions::default().unix_permissions(0o755),
+            },
         ];
 
         let expected_files = vec![
@@ -206,7 +284,8 @@ impl Builder {
                 continue;
             }
 
-            let dir_entries = WalkDir::new(full_path);
+            println!("Following Symlink: {} @ {}", self.follow_symlinks, full_path.display());
+            let dir_entries = WalkDir::new(full_path).follow_links(self.follow_symlinks);
 
             for entry in dir_entries {
                 let file = entry?;
@@ -246,6 +325,9 @@ impl Builder {
         self.build_frontend().await.context(
             "Failed to build frontend. There might be more information in the output above.",
         )?;
+        self.build_py_modules().await.context(
+            "Failed to build py_modules. There might be more information in the output above.",
+        )?;
         self.zip_plugin().context("Failed to zip plugin.")?;
 
         Ok(())
@@ -257,6 +339,7 @@ impl Builder {
         tmp_build_root: PathBuf,
         build_as_root: bool,
         build_with_dev: bool,
+        follow_symlinks: bool,
         output_filename_source: FilenameSource,
     ) -> Result<Self> {
         if !output_root.exists() {
@@ -281,6 +364,7 @@ impl Builder {
             docker_image: "ghcr.io/steamdeckhomebrew/builder:latest".to_owned(),
             build_as_root,
             build_with_dev,
+            follow_symlinks,
             output_filename_source,
         })
     }
