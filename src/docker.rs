@@ -3,7 +3,7 @@ use log::debug;
 use std::{path::PathBuf, process::Stdio};
 use tokio::{
     io::{AsyncBufReadExt, BufReader},
-    process::Command,
+    process::Command, fs::create_dir_all,
 };
 use users::{get_effective_gid, get_effective_uid};
 use which::which;
@@ -91,6 +91,7 @@ pub async fn run_image(tag: String, binds: Vec<(String, String)>, run_as_root: b
     let mut dynamic_args: Vec<String> = vec![];
 
     for bind in binds {
+        create_dir_all(&bind.0).await?;
         let bindstr = format!("{}:{}", bind.0, bind.1);
         dynamic_args.push("-v".into());
         dynamic_args.push(bindstr);
