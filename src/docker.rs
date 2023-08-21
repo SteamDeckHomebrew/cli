@@ -1,4 +1,5 @@
 use anyhow::{Context, Ok, Result};
+use log::debug;
 use std::{path::PathBuf, process::Stdio};
 use tokio::{
     io::{AsyncBufReadExt, BufReader},
@@ -96,6 +97,7 @@ pub async fn run_image(tag: String, binds: Vec<(String, String)>, run_as_root: b
     }
 
     let full_command = command_with_default_args.args(dynamic_args).arg(tag);
+    debug!("full_command: {full_command:?}");
     run_command(full_command).await?;
 
     Ok(())
