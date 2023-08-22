@@ -2,8 +2,9 @@ use anyhow::{Context, Ok, Result};
 use log::debug;
 use std::{path::PathBuf, process::Stdio};
 use tokio::{
+    fs::create_dir_all,
     io::{AsyncBufReadExt, BufReader},
-    process::Command, fs::create_dir_all,
+    process::Command,
 };
 use users::{get_effective_gid, get_effective_uid};
 use which::which;
