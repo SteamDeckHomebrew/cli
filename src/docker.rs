@@ -92,7 +92,10 @@ pub async fn run_image(tag: String, binds: Vec<(String, String)>, run_as_root: b
     let mut dynamic_args: Vec<String> = vec![];
 
     for bind in binds {
+        // Pre-create bind-mounted directories as the current user to ensure writability.
+        // Otherwise they are created by the Docker daemon, which may be a different user.
         create_dir_all(&bind.0).await?;
+
         let bindstr = format!("{}:{}", bind.0, bind.1);
         dynamic_args.push("-v".into());
         dynamic_args.push(bindstr);
