@@ -120,12 +120,12 @@ impl Builder {
                     let checksum = format!("{:x}", result);
 
                     if checksum == expected_checksum {
-                        println!("Checksums match for file at URL: {}", url);
+                        info!("Checksums match for file at URL: {}", url);
 
                         std::fs::create_dir_all(&bin_dir).expect("Failed to create directory");
                         let filepath = bin_dir.join(dest_filename);
                         std::fs::write(&filepath, &buffer).expect("Failed to write file");
-                        println!("File saved to: {:?}", filepath);
+                        info!("File saved to: {:?}", filepath);
                     } else {
                         error!("Checksums do not match for file at URL: {}", url);
                         panic!("Bad checksum for file defined in remote_binary")
