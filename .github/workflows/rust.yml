@@ -18,6 +18,8 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.build.outputs.version }}
     steps:
       - uses: actions/checkout@v3
 
@@ -49,6 +51,8 @@ jobs:
       contents: write
     if: github.event_name != 'pull_request'
     steps:
+      - uses: actions/checkout@v3
+
       - uses: actions/download-artifact@v3
         with:
           name: decky
@@ -60,4 +64,4 @@ jobs:
           prerelease: ${{ github.event.inputs.releaseAsPrerelease || true }}
           artifactErrorsFailBuild: true
           artifactContentType: "application/octet-stream"
-          tag: ${{ steps.build.outputs.version }}
+          tag: ${{ needs.build.outputs.version }}
