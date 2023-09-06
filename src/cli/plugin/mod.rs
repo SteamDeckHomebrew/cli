@@ -12,6 +12,7 @@ pub async fn parse(args: &PluginCLI) -> Result<()> {
             tmp_output_path,
             build_as_root,
             build_with_dev,
+            follow_symlinks,
             output_filename_source,
         } => {
             build::Builder::new(
@@ -20,6 +21,7 @@ pub async fn parse(args: &PluginCLI) -> Result<()> {
                 tmp_output_path.into(),
                 build_as_root.clone(),
                 build_with_dev.clone(),
+                follow_symlinks.clone(),
                 output_filename_source.clone(),
             )?
             .run()
@@ -32,6 +34,7 @@ pub async fn parse(args: &PluginCLI) -> Result<()> {
             tmp_output_path,
             build_as_root,
             build_with_dev,
+            follow_symlinks,
             output_filename_source,
             deck_ip,
             deck_port,
@@ -45,6 +48,7 @@ pub async fn parse(args: &PluginCLI) -> Result<()> {
                 tmp_output_path.into(),
                 build_as_root.clone(),
                 build_with_dev.clone(),
+                follow_symlinks.clone(),
                 output_filename_source.clone(),
                 deck_ip.clone(),
                 deck_port.clone(),
