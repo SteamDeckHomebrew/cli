@@ -107,30 +107,6 @@ impl Builder {
 
         info!("Building py_modules");
 
-        // TODO: Build wheels if required
-        /*
-        docker::run_image(
-            image_tag.into(),
-            vec![
-                (
-                    source_py_modules_dir
-                        .canonicalize()?
-                        .to_str()
-                        .unwrap()
-                        .into(),
-                    "/py_modules".into(),
-                ),
-                (
-                    tmp_py_modules_dir.to_str().unwrap().into(),
-                    "/py_modules/build".into(),
-                ),
-            ],
-            self.build_as_root.clone(),
-            self.build_with_dev.clone(),
-        )
-        .await
-        */
-
         self.copy_py_modules(source_py_modules_dir, tmp_py_modules_dir)?;
 
         Ok(())
