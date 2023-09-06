@@ -43,6 +43,7 @@ jobs:
           path: target/release/decky
 
   release:
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
