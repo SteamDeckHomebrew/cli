@@ -196,6 +196,7 @@ impl Deployer {
         tmp_build_root: PathBuf,
         build_as_root: bool,
         build_with_dev: bool,
+        follow_symlinks: bool,
         output_filename_source: FilenameSource,
         deck_ip: Option<String>,
         deck_port: Option<String>,
@@ -211,6 +212,7 @@ impl Deployer {
             tmp_build_root.clone(),
             build_as_root,
             build_with_dev,
+            follow_symlinks,
             output_filename_source,
         ).expect("Could not create builder");
 
