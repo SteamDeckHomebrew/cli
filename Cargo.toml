@@ -1,6 +1,6 @@
 [package]
 name = "decky"
-version = "0.0.1-alpha.12"
+version = "0.0.1-alpha.13"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -15,8 +15,10 @@ glob = "0.3.1"
 itertools = "0.10.5"
 log = "0.4"
 rand = "0.8.5"
+reqwest = "0.11.20"
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = "1.0.91"
+sha2 = "0.10.7"
 tokio = { version = "1.24.2", features = ["full"] }
 users = "0.11.0"
 walkdir = "2.3.2"

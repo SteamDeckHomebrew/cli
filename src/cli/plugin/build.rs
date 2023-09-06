@@ -2,7 +2,7 @@ use anyhow::{anyhow, Context, Result};
 use boolinator::Boolinator;
 use glob::glob;
 use itertools::Itertools;
-use log::info;
+use log::{error, info};
 use rand::distributions::{Alphanumeric, DistString};
 use std::{
     fs,
@@ -10,6 +10,9 @@ use std::{
     io::Write,
     path::{Path, PathBuf}, os,
 };
+use std::io::Read;
+use sha2::{Sha256, Digest};
+use serde_json::Value;
 use walkdir::WalkDir;
 use zip::{write::FileOptions, ZipWriter};
 
@@ -96,6 +99,45 @@ impl Builder {
         .await
     }
 
+    pub async fn copy_remote_binaries(&self) -> Result<()> {
+        let package_json_file = std::fs::read_to_string(self.plugin_root.join("package.json")).expect("Failed to read package.json");
+        let json: Value = serde_json::from_str(&package_json_file).expect("Failed to parse package.json");
+        let bin_dir = self.tmp_build_root.join("bin");
+
+        let mut any_binaries: bool = false;
+        if let Some(remote_binary) = json["remote_binary"].as_array() {
+            if !remote_binary.is_empty() {
+                any_binaries = true;
+                for binary in remote_binary {
+                    let url = binary["url"].as_str().expect("Failed to get URL from remote_binary config");
+                    let expected_checksum = binary["sha256hash"].as_str().expect("Failed to get sha256hash from remote_binary config");
+                    let dest_filename = binary["name"].as_str().expect("Failed to get name from remote_binary config");
+
+                    let response = reqwest::get(url).await.expect("Failed to download remote_binary");
+                    let buffer = response.bytes().await.expect("Failed to read remote_binary GET response");
+
+                    let mut hasher = Sha256::new();
+                    hasher.update(&buffer);
+                    let result = hasher.finalize();
+                    let checksum = format!("{:x}", result);
+
+                    if checksum == expected_checksum {
+                        info!("Checksums match for file at URL: {}", url);
+
+                        std::fs::create_dir_all(&bin_dir).expect("Failed to create directory");
+                        let filepath = bin_dir.join(dest_filename);
+                        std::fs::write(&filepath, &buffer).expect("Failed to write file");
+                        info!("File saved to: {:?}", filepath);
+                    } else {
+                        error!("Checksums do not match for file at URL: {}", url);
+                        panic!("Bad checksum for file defined in remote_binary")
+                    }
+                }
+            }
+        }
+
+        if !any_binaries {
+            info!("Plugin does not require any remote binaries");
     pub async fn build_py_modules(&self) -> Result<()> {
         let source_py_modules_dir = self.plugin_root.join("py_modules");
         let tmp_py_modules_dir = self.tmp_build_root.join("py_modules");
@@ -299,6 +341,8 @@ impl Builder {
         self.build_frontend().await.context(
             "Failed to build frontend. There might be more information in the output above.",
         )?;
+        self.copy_remote_binaries().await.context(
+            "Failed to copy remote binaries. There might be more information in the output above."
         self.build_py_modules().await.context(
             "Failed to build py_modules. There might be more information in the output above.",
         )?;
