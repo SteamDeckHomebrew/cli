@@ -4,15 +4,16 @@ use glob::glob;
 use itertools::Itertools;
 use log::{error, info};
 use rand::distributions::{Alphanumeric, DistString};
+use serde_json::Value;
+use sha2::{Digest, Sha256};
+use std::io::Read;
 use std::{
     fs,
     fs::File,
     io::Write,
-    path::{Path, PathBuf}, os,
+    os,
+    path::{Path, PathBuf},
 };
-use std::io::Read;
-use sha2::{Sha256, Digest};
-use serde_json::Value;
 use walkdir::WalkDir;
 use zip::{write::FileOptions, ZipWriter};
 
@@ -100,8 +101,10 @@ impl Builder {
     }
 
     pub async fn copy_remote_binaries(&self) -> Result<()> {
-        let package_json_file = std::fs::read_to_string(self.plugin_root.join("package.json")).expect("Failed to read package.json");
-        let json: Value = serde_json::from_str(&package_json_file).expect("Failed to parse package.json");
+        let package_json_file = std::fs::read_to_string(self.plugin_root.join("package.json"))
+            .expect("Failed to read package.json");
+        let json: Value =
+            serde_json::from_str(&package_json_file).expect("Failed to parse package.json");
         let bin_dir = self.tmp_build_root.join("bin");
 
         let mut any_binaries: bool = false;
@@ -109,12 +112,23 @@ impl Builder {
             if !remote_binary.is_empty() {
                 any_binaries = true;
                 for binary in remote_binary {
-                    let url = binary["url"].as_str().expect("Failed to get URL from remote_binary config");
-                    let expected_checksum = binary["sha256hash"].as_str().expect("Failed to get sha256hash from remote_binary config");
-                    let dest_filename = binary["name"].as_str().expect("Failed to get name from remote_binary config");
+                    let url = binary["url"]
+                        .as_str()
+                        .expect("Failed to get URL from remote_binary config");
+                    let expected_checksum = binary["sha256hash"]
+                        .as_str()
+                        .expect("Failed to get sha256hash from remote_binary config");
+                    let dest_filename = binary["name"]
+                        .as_str()
+                        .expect("Failed to get name from remote_binary config");
 
-                    let response = reqwest::get(url).await.expect("Failed to download remote_binary");
-                    let buffer = response.bytes().await.expect("Failed to read remote_binary GET response");
+                    let response = reqwest::get(url)
+                        .await
+                        .expect("Failed to download remote_binary");
+                    let buffer = response
+                        .bytes()
+                        .await
+                        .expect("Failed to read remote_binary GET response");
 
                     let mut hasher = Sha256::new();
                     hasher.update(&buffer);
@@ -138,6 +152,11 @@ impl Builder {
 
         if !any_binaries {
             info!("Plugin does not require any remote binaries");
+        }
+
+        Ok(())
+    }
+
     pub async fn build_py_modules(&self) -> Result<()> {
         let source_py_modules_dir = self.plugin_root.join("py_modules");
         let tmp_py_modules_dir = self.tmp_build_root.join("py_modules");
@@ -169,13 +188,13 @@ impl Builder {
             if file_type.is_symlink() && self.follow_symlinks {
                 let original = src.join(fs::read_link(entry.path())?);
                 let original_fullpath = original.canonicalize()?;
-                
+
                 os::unix::fs::symlink(original_fullpath, to)?;
             } else if file_type.is_dir() {
                 if entry.file_name() == "__pycache__" {
                     continue;
                 }
-                
+
                 self.copy_py_modules(entry.path(), to)?;
             } else if file_type.is_file() {
                 fs::copy(entry.path(), to)?;
@@ -228,7 +247,15 @@ impl Builder {
                 .to_string_lossy()
                 .to_string(),
         };
-        let zip_filename = format!("{}{}.zip", &filename, if self.build_with_dev { "-dev".to_string() } else { "".to_string() });
+        let zip_filename = format!(
+            "{}{}.zip",
+            &filename,
+            if self.build_with_dev {
+                "-dev".to_string()
+            } else {
+                "".to_string()
+            }
+        );
         let file = std::fs::File::create(&self.output_root.join(zip_filename))
             .expect("Could not create zip file");
         let mut zip = zip::ZipWriter::new(file);
@@ -342,7 +369,8 @@ impl Builder {
             "Failed to build frontend. There might be more information in the output above.",
         )?;
         self.copy_remote_binaries().await.context(
-            "Failed to copy remote binaries. There might be more information in the output above."
+            "Failed to copy remote binaries. There might be more information in the output above.",
+        )?;
         self.build_py_modules().await.context(
             "Failed to build py_modules. There might be more information in the output above.",
         )?;
