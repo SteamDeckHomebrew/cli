@@ -67,9 +67,13 @@ impl Plugin {
         plugin_root
             .join("deck.json")
             .exists()
-            .as_result(deckfile_location.clone(), anyhow!("Could not find deck.json"))
+            .as_result(
+                deckfile_location.clone(),
+                anyhow!("Could not find deck.json"),
+            )
             .and_then(|deckfile| std::fs::read_to_string(deckfile).map_err(Into::into))
-            .and_then(|str| serde_json::from_str::<DeckFile>(&str).map_err(Into::into)).or_else(|_| {
+            .and_then(|str| serde_json::from_str::<DeckFile>(&str).map_err(Into::into))
+            .or_else(|_| {
                 let deck = DeckFile {
                     deckip: "0.0.0.0".to_string(),
                     deckport: "22".to_string(),
@@ -77,9 +81,13 @@ impl Plugin {
                     deckkey: "-i $HOME/.ssh/id_rsa".to_string(),
                     deckdir: "/home/deck".to_string(),
                 };
-                std::fs::write(deckfile_location, serde_json::to_string_pretty(&deck).unwrap()).unwrap();
+                std::fs::write(
+                    deckfile_location,
+                    serde_json::to_string_pretty(&deck).unwrap(),
+                )
+                .unwrap();
                 Ok(deck)
-        })
+            })
     }
 
     fn find_pluginfile(plugin_root: &Path) -> Result<PluginFile> {

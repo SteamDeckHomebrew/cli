@@ -45,7 +45,7 @@ pub enum PluginCommand {
 
         #[arg(short = 'd', long, default_value = "false")]
         build_with_dev: bool,
-        
+
         #[arg(short = 'S', long, default_value = "true")]
         follow_symlinks: bool,
 
@@ -71,7 +71,7 @@ pub enum PluginCommand {
 
         #[arg(short = 's', long, value_enum, default_value = "plugin-name")]
         output_filename_source: FilenameSource,
-        
+
         #[arg(short = 'S', long, default_value = "true")]
         follow_symlinks: bool,
 

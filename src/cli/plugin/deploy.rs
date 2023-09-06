@@ -55,13 +55,25 @@ impl Deployer {
                 format!("deck@{}", deck.deckip),
                 "-p".to_string(),
                 format!("{}", deck.deckport),
-                format!("{}", if deck.deckkey.contains("-i ") { "-i" } else { "" }),
-                format!("{}", if deck.deckkey.contains("-i ") {
-                    deck.deckkey
-                        .replace("-i ", "")
-                        .replace("$HOME", &*home_dir().unwrap().to_string_lossy())
-                        .replace("${env:HOME}", &*home_dir().unwrap().to_string_lossy())
-                } else {"".to_string()}),
+                format!(
+                    "{}",
+                    if deck.deckkey.contains("-i ") {
+                        "-i"
+                    } else {
+                        ""
+                    }
+                ),
+                format!(
+                    "{}",
+                    if deck.deckkey.contains("-i ") {
+                        deck.deckkey
+                            .replace("-i ", "")
+                            .replace("$HOME", &*home_dir().unwrap().to_string_lossy())
+                            .replace("${env:HOME}", &*home_dir().unwrap().to_string_lossy())
+                    } else {
+                        "".to_string()
+                    }
+                ),
                 format!(
                     "echo '{}' | sudo -S chmod -R ug+rw {}/homebrew/",
                     deck.deckpass, deck.deckdir
@@ -104,13 +116,25 @@ impl Deployer {
                 format!("deck@{}", deck.deckip),
                 "-p".to_string(),
                 format!("{}", deck.deckport),
-                format!("{}", if deck.deckkey.contains("-i ") { "-i" } else { "" }),
-                format!("{}", if deck.deckkey.contains("-i ") {
-                    deck.deckkey
-                        .replace("-i ", "")
-                        .replace("$HOME", &*home_dir().unwrap().to_string_lossy())
-                        .replace("${env:HOME}", &*home_dir().unwrap().to_string_lossy())
-                } else {"".to_string()}),
+                format!(
+                    "{}",
+                    if deck.deckkey.contains("-i ") {
+                        "-i"
+                    } else {
+                        ""
+                    }
+                ),
+                format!(
+                    "{}",
+                    if deck.deckkey.contains("-i ") {
+                        deck.deckkey
+                            .replace("-i ", "")
+                            .replace("$HOME", &*home_dir().unwrap().to_string_lossy())
+                            .replace("${env:HOME}", &*home_dir().unwrap().to_string_lossy())
+                    } else {
+                        "".to_string()
+                    }
+                ),
                 format!(
                     "echo '{}' | sudo -S systemctl restart plugin_loader.service",
                     deck.deckpass
@@ -171,7 +195,15 @@ impl Deployer {
                 .to_string_lossy()
                 .to_string(),
         };
-        let zip_filename = format!("{}{}.zip", &filename, if self.builder.build_with_dev { "-dev".to_string() } else { "".to_string() });
+        let zip_filename = format!(
+            "{}{}.zip",
+            &filename,
+            if self.builder.build_with_dev {
+                "-dev".to_string()
+            } else {
+                "".to_string()
+            }
+        );
         let file = std::fs::File::open(&self.builder.output_root.join(zip_filename))
             .expect("Could not open zip file");
         let mut zip = zip::ZipArchive::new(file).unwrap();
@@ -214,7 +246,8 @@ impl Deployer {
             build_with_dev,
             follow_symlinks,
             output_filename_source,
-        ).expect("Could not create builder");
+        )
+        .expect("Could not create builder");
 
         Ok(Self {
             builder: builder.clone(),
