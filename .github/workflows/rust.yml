@@ -17,7 +17,7 @@ env:
 
 jobs:
   build:
-    name: Build ${{ matrix.platform.release_for }}
+    name: Build for ${{ matrix.platform.release_for }}
     strategy:
       matrix:
         platform:
@@ -41,6 +41,12 @@ jobs:
       version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v3
+
+      - name: Rust cache for ${{ matrix.platform.release_for }}
+        uses: Swatinem/rust-cache@v2
+        with:
+          prefix-key: rust-${{ matrix.platform.target }}
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Build binary
         uses: houseabsolute/actions-rust-cross@v0
