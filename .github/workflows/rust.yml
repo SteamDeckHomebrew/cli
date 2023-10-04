@@ -74,15 +74,23 @@ jobs:
           echo "version=$version" >> $GITHUB_OUTPUT
 
       - uses: actions/download-artifact@v3
-      
-      - name: Display structure of downloaded files
-        run: ls -R
+        with:
+          path: artifacts
 
-      # - uses: ncipollo/release-action@v1
-      #   with:
-      #     artifacts: "decky"
-      #     skipIfReleaseExists: true
-      #     prerelease: ${{ github.event.inputs.releaseAsPrerelease || true }}
-      #     artifactErrorsFailBuild: true
-      #     artifactContentType: "application/octet-stream"
-      #     tag: ${{ steps.version.outputs.version }}
+      - name: Rename artifacts name
+        run: |
+          cd artifacts
+          for i in *; do
+            mv $i/decky _$i
+            rm -rf $i
+            mv _$i $i
+          done
+
+      - uses: ncipollo/release-action@v1
+        with:
+          artifacts: "artifacts/*"
+          skipIfReleaseExists: true
+          prerelease: ${{ github.event.inputs.releaseAsPrerelease || true }}
+          artifactErrorsFailBuild: true
+          artifactContentType: "application/octet-stream"
+          tag: ${{ steps.version.outputs.version }}
