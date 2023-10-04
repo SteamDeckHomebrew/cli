@@ -51,6 +51,9 @@ jobs:
           args: "--locked --release"
           strip: true
 
+      - name: Display structure
+        run: ls -R
+
       - name: Upload binary
         uses: actions/upload-artifact@v3.1.2
         with:
