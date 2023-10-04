@@ -17,9 +17,33 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    name: Build ${{ matrix.platform.release_for }}
+    strategy:
+      matrix:
+        platform:
+          - release_for: Linux-x86_64
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            name: decky-linux-x86_64
+
+          - release_for: Linux-aarch64
+            os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            name: decky-linux-aarch64
+
+          - release_for: macOS-x86_64
+            os: macOS-latest
+            target: x86_64-apple-darwin
+            name: decky-macOS-x86_64
+
+          - release_for: macOS-aarch64
+            os: macOS-latest
+            target: aarch64-apple-darwin
+            name: decky-macOS-aarch64
+
+    runs-on: ${{ matrix.platform.os }}
     outputs:
-      version: ${{ steps.build.outputs.version }}
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v3
 
@@ -35,18 +59,11 @@ jobs:
         id: build
         run: |
           cargo build --release
-    
-      - name: Grab version
-        id: version
-        run: |
-          version=$(grep -iPo '(?<=^version = ")([^"]+)(?=")' Cargo.toml)
-          echo "Version code is $version"
-          echo "version=$version" >> $GITHUB_OUTPUT
 
       - name: Upload binary
         uses: actions/upload-artifact@v3.1.2
         with:
-          name: decky
+          name: ${{ matrix.platform.name }}
           path: target/release/decky
 
   release:
@@ -57,16 +74,24 @@ jobs:
     if: github.event_name != 'pull_request'
     steps:
       - uses: actions/checkout@v3
+    
+      - name: Grab version
+        id: version
+        run: |
+          version=$(grep -iPo '(?<=^version = ")([^"]+)(?=")' Cargo.toml)
+          echo "Version code is $version"
+          echo "version=$version" >> $GITHUB_OUTPUT
 
       - uses: actions/download-artifact@v3
-        with:
-          name: decky
+      
+      - name: Display structure of downloaded files
+        run: ls -R
 
-      - uses: ncipollo/release-action@v1
-        with:
-          artifacts: "decky"
-          skipIfReleaseExists: true
-          prerelease: ${{ github.event.inputs.releaseAsPrerelease || true }}
-          artifactErrorsFailBuild: true
-          artifactContentType: "application/octet-stream"
-          tag: ${{ needs.build.outputs.version }}
+      # - uses: ncipollo/release-action@v1
+      #   with:
+      #     artifacts: "decky"
+      #     skipIfReleaseExists: true
+      #     prerelease: ${{ github.event.inputs.releaseAsPrerelease || true }}
+      #     artifactErrorsFailBuild: true
+      #     artifactContentType: "application/octet-stream"
+      #     tag: ${{ steps.version.outputs.version }}
