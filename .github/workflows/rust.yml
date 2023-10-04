@@ -47,18 +47,13 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Install latest Rust nightly
-        uses: actions-rs/toolchain@v1
+      - name: Build binary
+        uses: houseabsolute/actions-rust-cross@v0
         with:
-            toolchain: nightly
-            default: true
-            override: true
-            components: rustfmt, clippy
-
-      - name: Build
-        id: build
-        run: |
-          cargo build --release
+          command: build
+          target: ${{ matrix.platform.target }}
+          args: "--locked --release"
+          strip: true
 
       - name: Upload binary
         uses: actions/upload-artifact@v3.1.2
