@@ -37,6 +37,12 @@ jobs:
           cargo build --release
           version=$(target/release/decky --version | cut -d " " -f 2)
           echo "version=$version" >> $GITHUB_OUTPUT
+    
+      - name: Grab version
+        id: version
+        run: |
+          version=$(grep -iPo '(?<=^version = ")([^"]+)(?=")' Cargo.toml)
+          echo "version=$version" >> $GITHUB_OUTPUT
 
       - name: Upload binary
         uses: actions/upload-artifact@v3.1.2
@@ -64,4 +70,4 @@ jobs:
           prerelease: ${{ github.event.inputs.releaseAsPrerelease || true }}
           artifactErrorsFailBuild: true
           artifactContentType: "application/octet-stream"
-          tag: ${{ needs.build.outputs.version }}
+          tag: ${{ needs.version.outputs.version }}
