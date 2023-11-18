@@ -93,6 +93,10 @@ impl Builder {
                     self.tmp_build_root.join("bin").to_str().unwrap().into(),
                     "/backend/out".into(),
                 ),
+                (
+                    self.plugin_root.canonicalize()?.to_str().unwrap().into(),
+                    "/plugin".into(),
+                ),
             ],
             self.build_as_root.clone(),
             self.build_with_dev.clone(),
