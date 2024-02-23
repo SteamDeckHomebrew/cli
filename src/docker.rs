@@ -1,4 +1,4 @@
-use anyhow::{Context, Ok, Result};
+use anyhow::{anyhow, Context, Ok, Result};
 use log::debug;
 use std::{path::PathBuf, process::Stdio};
 use tokio::{
@@ -23,20 +23,19 @@ async fn run_command(cmd: &mut Command) -> Result<()> {
 
     // Ensure the child process is spawned in the runtime so it can
     // make progress on its own while we await for any output.
-    tokio::spawn(async move {
-        let status = child
-            .wait()
-            .await
-            .expect("child process encountered an error");
 
-        println!("child status was: {}", status);
-    });
+    let join_handle = tokio::spawn(async move { child.wait().await });
 
     while let Some(line) = reader.next_line().await? {
         println!("Line: {}", line);
     }
 
-    Ok(())
+    join_handle.await?.map_err(|err| anyhow!(err)).and_then(
+        |status| match status.success() {
+            true => Ok(()),
+            false => Err(anyhow!("child status was: {}", status))
+        }
+    )
 }
 
 pub fn ensure_availability() -> Result<()> {
