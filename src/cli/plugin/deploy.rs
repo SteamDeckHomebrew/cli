@@ -8,7 +8,7 @@ use rand::distributions::{Alphanumeric, DistString};
 
 use crate::cli::plugin::build::Builder;
 use crate::plugin::DeckFile;
-use crate::{cli::FilenameSource, plugin::Plugin};
+use crate::{cli::FilenameSource, cli::ContainerEngine, plugin::Plugin};
 
 #[derive(Clone)]
 pub struct Deployer {
@@ -230,6 +230,7 @@ impl Deployer {
         build_with_dev: bool,
         follow_symlinks: bool,
         output_filename_source: FilenameSource,
+        container_engine: ContainerEngine,
         deck_ip: Option<String>,
         deck_port: Option<String>,
         deck_pass: Option<String>,
@@ -246,6 +247,7 @@ impl Deployer {
             build_with_dev,
             follow_symlinks,
             output_filename_source,
+            container_engine,
         )
         .expect("Could not create builder");
 

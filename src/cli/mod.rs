@@ -11,6 +11,22 @@ pub struct CLI {
     pub command: Command,
 }
 
+#[derive(clap::ValueEnum, Clone)]
+pub enum ContainerEngine {
+    Docker,
+    Podman,
+}
+
+impl ContainerEngine {
+    pub fn bin_name(&self) -> &str {
+        match self {
+            Self::Docker => "docker",
+            Self::Podman => "podman",
+        }
+    }
+}
+
+
 #[derive(Subcommand)]
 pub enum Command {
     Plugin(PluginCLI),
@@ -51,6 +67,9 @@ pub enum PluginCommand {
 
         #[arg(short = 's', long, value_enum, default_value = "plugin-name")]
         output_filename_source: FilenameSource,
+
+        #[arg(short = 'e', long = "engine", default_value = "docker")]
+        container_engine: ContainerEngine,
     },
     New,
     Deploy {
@@ -71,6 +90,9 @@ pub enum PluginCommand {
 
         #[arg(short = 's', long, value_enum, default_value = "plugin-name")]
         output_filename_source: FilenameSource,
+
+        #[arg(short = 'e', long = "engine", default_value = "docker")]
+        container_engine: ContainerEngine,
 
         #[arg(short = 'S', long, default_value = "true")]
         follow_symlinks: bool,
