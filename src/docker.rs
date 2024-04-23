@@ -39,7 +39,7 @@ async fn run_command(cmd: &mut Command) -> Result<()> {
 }
 
 pub fn ensure_availability() -> Result<()> {
-    which("docker")
+    let exit_status = which("docker")
         .map(|_| Ok(()))
         .context("`docker` program not found. Make sure it is installed and in your $PATH. For more information visit https://docs.docker.com/desktop/troubleshoot/overview/")
         .and_then(|_| {
@@ -48,8 +48,12 @@ pub fn ensure_availability() -> Result<()> {
                     .status()
                     .context("Error while checking for Docker availability. Please run `docker ps` in your terminal and fix any errors that show up.")
             }
-        )
-        .map(|exit_status| exit_status.exit_ok().context("Docker is installed but doesn't seem to be available! Is the daemon running? For more information visit https://docs.docker.com/desktop/troubleshoot/overview/"))?
+        )?;
+    if !exit_status.success() {
+        Err(anyhow!("exit status {}: Docker is installed but doesn't seem to be available! Is the daemon running? For more information visit https://docs.docker.com/desktop/troubleshoot/overview/", exit_status.code().unwrap()))
+    } else {
+        Ok(())
+    }
 }
 
 // docker build -f $PWD/backend/Dockerfile -t "$docker_name" .

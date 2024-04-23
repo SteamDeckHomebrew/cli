@@ -6,7 +6,6 @@ use log::{error, info};
 use rand::distributions::{Alphanumeric, DistString};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
-use std::io::Read;
 use std::{
     fs,
     fs::File,
