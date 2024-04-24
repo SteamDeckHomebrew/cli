@@ -107,8 +107,12 @@ pub async fn run_image(
         // Pre-create bind-mounted directories as the current user to ensure writability.
         // Otherwise they are created by the Docker daemon, which may be a different user.
         create_dir_all(&bind.0).await?;
+        #[cfg(target_family = "unix")]
+        std::fs::set_permissions(&bind.0, std::os::unix::fs::PermissionsExt::from_mode(0o777))?;
+        let bindstr = format!("{}:{}:z", bind.0, bind.1);
+        // :z avoids issues with selinux
+        // https://docs.docker.com/storage/bind-mounts/#configure-the-selinux-label
 
-        let bindstr = format!("{}:{}", bind.0, bind.1);
         dynamic_args.push("-v".into());
         dynamic_args.push(bindstr);
     }
