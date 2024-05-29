@@ -38,23 +38,27 @@ async fn run_command(cmd: &mut Command) -> Result<()> {
     )
 }
 
-pub fn ensure_availability() -> Result<()> {
-    which("docker")
+pub fn ensure_availability(engine: &crate::cli::ContainerEngine) -> Result<()> {
+    let exit_status = which(engine.bin_name())
         .map(|_| Ok(()))
-        .context("`docker` program not found. Make sure it is installed and in your $PATH. For more information visit https://docs.docker.com/desktop/troubleshoot/overview/")
+        .context(format!("`{}` program not found. Make sure it is installed and in your $PATH. For more information visit https://docs.docker.com/desktop/troubleshoot/overview/", engine.bin_name()))
         .and_then(|_| {
-                std::process::Command::new("docker")
+                std::process::Command::new(engine.bin_name())
                     .arg("ps")
                     .status()
-                    .context("Error while checking for Docker availability. Please run `docker ps` in your terminal and fix any errors that show up.")
+                    .context(format!("Error while checking for {0} availability. Please run `{0} ps` in your terminal and fix any errors that show up.", engine.bin_name()))
             }
-        )
-        .map(|exit_status| exit_status.exit_ok().context("Docker is installed but doesn't seem to be available! Is the daemon running? For more information visit https://docs.docker.com/desktop/troubleshoot/overview/"))?
+        )?;
+    if !exit_status.success() {
+        Err(anyhow!("exit status {}: {1} is installed but doesn't seem to be available! Is the daemon running? For more information visit https://docs.{1}.com/desktop/troubleshoot/overview/", exit_status.code().unwrap(), engine.bin_name()))
+    } else {
+        Ok(())
+    }
 }
 
 // docker build -f $PWD/backend/Dockerfile -t "$docker_name" .
-pub async fn build_image(dockerfile: PathBuf, tag: String) -> Result<String> {
-    let mut cmd = Command::new("docker");
+pub async fn build_image(engine: &crate::cli::ContainerEngine, dockerfile: PathBuf, tag: String) -> Result<String> {
+    let mut cmd = Command::new(engine.bin_name());
     let full_command = cmd
         .arg("build")
         .arg("-f")
@@ -70,12 +74,13 @@ pub async fn build_image(dockerfile: PathBuf, tag: String) -> Result<String> {
 
 // docker run --rm -i -v $PWD/backend:/backend -v /tmp/output/$plugin/backend/out:/backend/out --entrypoint /backend/entrypoint.sh "$docker_name"
 pub async fn run_image(
+    engine: &crate::cli::ContainerEngine,
     tag: String,
     binds: Vec<(String, String)>,
     run_as_root: bool,
     run_with_dev: bool,
 ) -> Result<()> {
-    let mut cmd = Command::new("docker");
+    let mut cmd = Command::new(engine.bin_name());
     let mut command_with_default_args = cmd.arg("run").arg("--rm");
 
     if !run_as_root {
@@ -102,8 +107,12 @@ pub async fn run_image(
         // Pre-create bind-mounted directories as the current user to ensure writability.
         // Otherwise they are created by the Docker daemon, which may be a different user.
         create_dir_all(&bind.0).await?;
+        #[cfg(target_family = "unix")]
+        std::fs::set_permissions(&bind.0, std::os::unix::fs::PermissionsExt::from_mode(0o777))?;
+        let bindstr = format!("{}:{}:z", bind.0, bind.1);
+        // :z avoids issues with selinux
+        // https://docs.docker.com/storage/bind-mounts/#configure-the-selinux-label
 
-        let bindstr = format!("{}:{}", bind.0, bind.1);
         dynamic_args.push("-v".into());
         dynamic_args.push(bindstr);
     }

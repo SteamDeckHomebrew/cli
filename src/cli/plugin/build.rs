@@ -6,7 +6,6 @@ use log::{error, info};
 use rand::distributions::{Alphanumeric, DistString};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
-use std::io::Read;
 use std::{
     fs,
     fs::File,
@@ -18,8 +17,8 @@ use walkdir::WalkDir;
 use zip::{write::FileOptions, ZipWriter};
 
 use crate::{
-    cli::FilenameSource,
-    docker,
+    cli::{FilenameSource, ContainerEngine},
+    container_engine,
     plugin::{CustomBackend, Plugin},
 };
 
@@ -35,13 +34,15 @@ pub struct Builder {
     pub build_with_dev: bool,
     pub follow_symlinks: bool,
     pub output_filename_source: FilenameSource,
+    pub container_engine: ContainerEngine,
 }
 
 impl Builder {
     pub async fn build_frontend(&self) -> Result<()> {
         info!("Building frontend");
 
-        docker::run_image(
+        container_engine::run_image(
+            &self.container_engine,
             self.docker_image.clone(),
             vec![
                 (
@@ -67,7 +68,8 @@ impl Builder {
 
         match self.plugin.custom_backend {
             CustomBackend::Dockerfile => {
-                image_tag = docker::build_image(
+                image_tag = container_engine::build_image(
+                    &self.container_engine,
                     self.plugin_root.join("backend").join("Dockerfile"),
                     self.plugin.meta.name.to_ascii_lowercase().replace(" ", "-"),
                 )
@@ -77,7 +79,8 @@ impl Builder {
             CustomBackend::None => {}
         }
 
-        docker::run_image(
+        container_engine::run_image(
+            &self.container_engine,
             image_tag.into(),
             vec![
                 (
@@ -391,12 +394,13 @@ impl Builder {
         build_with_dev: bool,
         follow_symlinks: bool,
         output_filename_source: FilenameSource,
+        container_engine: ContainerEngine,
     ) -> Result<Self> {
         if !output_root.exists() {
             std::fs::create_dir(&output_root)?;
         }
 
-        docker::ensure_availability()?;
+        container_engine::ensure_availability(&container_engine)?;
 
         Builder::validate_tmp_build_root(&tmp_build_root).unwrap();
 
@@ -416,6 +420,7 @@ impl Builder {
             build_with_dev,
             follow_symlinks,
             output_filename_source,
+            container_engine,
         })
     }
 }

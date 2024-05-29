@@ -14,6 +14,7 @@ pub enum CustomBackend {
 pub struct Plugin {
     pub meta: PluginFile,
     pub deck: DeckFile,
+    #[allow(dead_code)]
     pub root: PathBuf,
     pub custom_backend: CustomBackend,
 }

@@ -14,6 +14,7 @@ pub async fn parse(args: &PluginCLI) -> Result<()> {
             build_with_dev,
             follow_symlinks,
             output_filename_source,
+            container_engine
         } => {
             build::Builder::new(
                 plugin_path.into(),
@@ -23,6 +24,7 @@ pub async fn parse(args: &PluginCLI) -> Result<()> {
                 build_with_dev.clone(),
                 follow_symlinks.clone(),
                 output_filename_source.clone(),
+                container_engine.clone(),
             )?
             .run()
             .await
@@ -36,6 +38,7 @@ pub async fn parse(args: &PluginCLI) -> Result<()> {
             build_with_dev,
             follow_symlinks,
             output_filename_source,
+            container_engine,
             deck_ip,
             deck_port,
             deck_pass,
@@ -50,6 +53,7 @@ pub async fn parse(args: &PluginCLI) -> Result<()> {
                 build_with_dev.clone(),
                 follow_symlinks.clone(),
                 output_filename_source.clone(),
+                container_engine.clone(),
                 deck_ip.clone(),
                 deck_port.clone(),
                 deck_pass.clone(),
