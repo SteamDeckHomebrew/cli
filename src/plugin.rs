@@ -13,7 +13,6 @@ pub enum CustomBackend {
 #[derive(Clone)]
 pub struct Plugin {
     pub meta: PluginFile,
-    pub deck: DeckFile,
     #[allow(dead_code)]
     pub root: PathBuf,
     pub custom_backend: CustomBackend,
@@ -28,14 +27,6 @@ pub struct PluginFile {
     pub flags: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
-pub struct DeckFile {
-    pub deckip: String,
-    pub deckport: String,
-    pub deckpass: String,
-    pub deckkey: String,
-    pub deckdir: String,
-}
 
 impl Plugin {
     fn find_custom_backend(plugin_root: &Path) -> Result<CustomBackend> {
@@ -61,36 +52,6 @@ impl Plugin {
             .as_result((), anyhow!("Could not find package.json"))
     }
 
-    fn find_deckfile(plugin_root: &Path) -> Result<DeckFile> {
-        info!("Looking for deck.json...");
-        let deckfile_location = plugin_root.join("deck.json");
-
-        plugin_root
-            .join("deck.json")
-            .exists()
-            .as_result(
-                deckfile_location.clone(),
-                anyhow!("Could not find deck.json"),
-            )
-            .and_then(|deckfile| std::fs::read_to_string(deckfile).map_err(Into::into))
-            .and_then(|str| serde_json::from_str::<DeckFile>(&str).map_err(Into::into))
-            .or_else(|_| {
-                let deck = DeckFile {
-                    deckip: "0.0.0.0".to_string(),
-                    deckport: "22".to_string(),
-                    deckpass: "ssap".to_string(),
-                    deckkey: "-i $HOME/.ssh/id_rsa".to_string(),
-                    deckdir: "/home/deck".to_string(),
-                };
-                std::fs::write(
-                    deckfile_location,
-                    serde_json::to_string_pretty(&deck).unwrap(),
-                )
-                .unwrap();
-                Ok(deck)
-            })
-    }
-
     fn find_pluginfile(plugin_root: &Path) -> Result<PluginFile> {
         info!("Looking for plugin.json...");
         let pluginfile_location = plugin_root.join("plugin.json");
@@ -108,7 +69,6 @@ impl Plugin {
 
         Ok(Self {
             meta: Plugin::find_pluginfile(&plugin_root)?,
-            deck: Plugin::find_deckfile(&plugin_root)?,
             custom_backend: Plugin::find_custom_backend(&plugin_root)?,
             root: plugin_root.clone(),
         })

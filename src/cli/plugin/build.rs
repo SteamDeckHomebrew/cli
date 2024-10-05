@@ -14,10 +14,10 @@ use std::{
     path::{Path, PathBuf},
 };
 use walkdir::WalkDir;
-use zip::{write::FileOptions, ZipWriter};
+use zip::{write::FileOptions, CompressionMethod, ZipWriter};
 
 use crate::{
-    cli::{FilenameSource, ContainerEngine},
+    cli::{CompressMethod, ContainerEngine, FilenameSource},
     container_engine,
     plugin::{CustomBackend, Plugin},
 };
@@ -35,6 +35,8 @@ pub struct Builder {
     pub follow_symlinks: bool,
     pub output_filename_source: FilenameSource,
     pub container_engine: ContainerEngine,
+    pub compression_method: CompressMethod,
+    pub compression_level: Option<i32>,
 }
 
 impl Builder {
@@ -216,7 +218,7 @@ impl Builder {
         filename: &str,
         path: PathBuf,
         zip: &mut ZipWriter<File>,
-        perms: FileOptions,
+        opts: FileOptions,
     ) -> Result<()> {
         let name = path
             .strip_prefix(&self.tmp_build_root)
@@ -233,11 +235,25 @@ impl Builder {
         if path.is_file() {
             let bytes = std::fs::read(&path).unwrap();
 
-            zip.start_file(name.to_str().unwrap(), perms)?;
+            let method = match self.compression_method {
+                CompressMethod::Deflate => CompressionMethod::Deflated,
+                CompressMethod::Store => CompressionMethod::Stored,
+            };
+
+            let mut opts = opts.compression_method(method);
+
+            if method == CompressionMethod::Deflated {
+                opts = match self.compression_level {
+                    Some(level) => opts.compression_level(Some(level)),
+                    None => opts.compression_level(Some(9))
+                }
+            }
+
+            zip.start_file(name.to_str().unwrap(), opts)?;
 
             zip.write_all(&bytes)?;
         } else if !name.as_os_str().is_empty() {
-            zip.add_directory(name.to_str().unwrap(), perms)?;
+            zip.add_directory(name.to_str().unwrap(), opts)?;
         }
 
         Ok(())
@@ -395,6 +411,8 @@ impl Builder {
         follow_symlinks: bool,
         output_filename_source: FilenameSource,
         container_engine: ContainerEngine,
+        compression_method: CompressMethod,
+        compression_level: Option<i32>,
     ) -> Result<Self> {
         if !output_root.exists() {
             std::fs::create_dir(&output_root)?;
@@ -421,6 +439,8 @@ impl Builder {
             follow_symlinks,
             output_filename_source,
             container_engine,
+            compression_method,
+            compression_level,
         })
     }
 }

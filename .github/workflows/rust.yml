@@ -40,7 +40,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.version }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Rust cache for ${{ matrix.platform.release_for }}
         uses: Swatinem/rust-cache@v2
@@ -58,7 +58,7 @@ jobs:
           strip: true
 
       - name: Upload binary
-        uses: actions/upload-artifact@v3.1.2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.platform.name }}
           path: target/${{ matrix.platform.target }}/release/decky
@@ -70,7 +70,7 @@ jobs:
       contents: write
     if: github.event_name != 'pull_request'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
     
       - name: Grab version
         id: version
@@ -79,7 +79,7 @@ jobs:
           echo "Version code is $version"
           echo "version=$version" >> $GITHUB_OUTPUT
 
-      - uses: actions/download-artifact@v4.1.7
+      - uses: actions/download-artifact@v4
         with:
           path: artifacts
 

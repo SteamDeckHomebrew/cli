@@ -27,6 +27,12 @@ impl ContainerEngine {
 }
 
 
+#[derive(clap::ValueEnum, Clone)]
+pub enum CompressMethod {
+    Deflate,
+    Store,
+}
+
 #[derive(Subcommand)]
 pub enum Command {
     Plugin(PluginCLI),
@@ -70,6 +76,12 @@ pub enum PluginCommand {
 
         #[arg(short = 'e', long = "engine", default_value = "docker")]
         container_engine: ContainerEngine,
+
+        #[arg(short = 'm', long, default_value = "deflate")]
+        compression_method: CompressMethod,
+
+        #[arg(short = 'l', long)]
+        compression_level: Option<i32>,
     },
     New,
     Deploy {
@@ -93,6 +105,12 @@ pub enum PluginCommand {
 
         #[arg(short = 'e', long = "engine", default_value = "docker")]
         container_engine: ContainerEngine,
+
+        #[arg(short = 'm', long, default_value = "deflate")]
+        compression_method: CompressMethod,
+
+        #[arg(short = 'l', long)]
+        compression_level: Option<i32>,
 
         #[arg(short = 'S', long, default_value = "true")]
         follow_symlinks: bool,
