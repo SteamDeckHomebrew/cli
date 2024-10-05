@@ -2,14 +2,25 @@ use dirs::home_dir;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
+use boolinator::Boolinator;
+use serde::{Deserialize, Serialize};
+
 use log::info;
 use rand::distributions::{Alphanumeric, DistString};
 
 use crate::cli::plugin::build::Builder;
 use crate::cli::CompressMethod;
-use crate::plugin::DeckFile;
 use crate::{cli::FilenameSource, cli::ContainerEngine, plugin::Plugin};
+
+#[derive(Serialize, Deserialize, Clone)]
+pub struct DeckFile {
+    pub deckip: String,
+    pub deckport: String,
+    pub deckpass: String,
+    pub deckkey: String,
+    pub deckdir: String,
+}
 
 #[derive(Clone)]
 pub struct Deployer {
@@ -164,7 +175,7 @@ impl Deployer {
                 deckdir: self.deck_dir.clone().unwrap(),
             };
         } else {
-            deck = self.plugin.deck.clone();
+            deck = self.find_deckfile()?;
             if self.deck_ip.is_some() {
                 deck.deckip = self.deck_ip.clone().unwrap();
             }
@@ -221,6 +232,36 @@ impl Deployer {
         self.restart_decky(deck.clone()).await?;
 
         Ok(())
+    }
+
+    fn find_deckfile(&mut self) -> Result<DeckFile> {
+        info!("Looking for deck.json...");
+        let deckfile_location = self.plugin_root.join("deck.json");
+
+        self.plugin_root
+            .join("deck.json")
+            .exists()
+            .as_result(
+                deckfile_location.clone(),
+                anyhow!("Could not find deck.json"),
+            )
+            .and_then(|deckfile| std::fs::read_to_string(deckfile).map_err(Into::into))
+            .and_then(|str| serde_json::from_str::<DeckFile>(&str).map_err(Into::into))
+            .or_else(|_| {
+                let deck = DeckFile {
+                    deckip: "0.0.0.0".to_string(),
+                    deckport: "22".to_string(),
+                    deckpass: "ssap".to_string(),
+                    deckkey: "-i $HOME/.ssh/id_rsa".to_string(),
+                    deckdir: "/home/deck".to_string(),
+                };
+                std::fs::write(
+                    deckfile_location,
+                    serde_json::to_string_pretty(&deck).unwrap(),
+                )
+                .unwrap();
+                Ok(deck)
+            })
     }
 
     pub fn new(
