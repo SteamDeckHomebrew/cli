@@ -7,6 +7,7 @@ use log::info;
 use rand::distributions::{Alphanumeric, DistString};
 
 use crate::cli::plugin::build::Builder;
+use crate::cli::CompressMethod;
 use crate::plugin::DeckFile;
 use crate::{cli::FilenameSource, cli::ContainerEngine, plugin::Plugin};
 
@@ -231,6 +232,8 @@ impl Deployer {
         follow_symlinks: bool,
         output_filename_source: FilenameSource,
         container_engine: ContainerEngine,
+        compression_method: CompressMethod,
+        compression_level: Option<i32>,
         deck_ip: Option<String>,
         deck_port: Option<String>,
         deck_pass: Option<String>,
@@ -248,6 +251,8 @@ impl Deployer {
             follow_symlinks,
             output_filename_source,
             container_engine,
+            compression_method,
+            compression_level,
         )
         .expect("Could not create builder");
 
