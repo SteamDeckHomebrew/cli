@@ -6,7 +6,7 @@ use tokio::{
     io::{AsyncBufReadExt, BufReader},
     process::Command,
 };
-use users::{get_effective_gid, get_effective_uid};
+use uzers::{get_effective_gid, get_effective_uid};
 use which::which;
 
 async fn run_command(cmd: &mut Command) -> Result<()> {
