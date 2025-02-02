@@ -117,46 +117,56 @@ impl Builder {
         let bin_dir = self.tmp_build_root.join("bin");
 
         let mut any_binaries: bool = false;
+        let mut remote_binary_bundling: bool = false;
+        if json["remote_binary_bundling"].as_bool().is_some() {
+            remote_binary_bundling = true;
+        }
         if let Some(remote_binary) = json["remote_binary"].as_array() {
             if !remote_binary.is_empty() {
                 any_binaries = true;
-                for binary in remote_binary {
-                    let url = binary["url"]
-                        .as_str()
-                        .expect("Failed to get URL from remote_binary config");
-                    let expected_checksum = binary["sha256hash"]
-                        .as_str()
-                        .expect("Failed to get sha256hash from remote_binary config");
-                    let dest_filename = binary["name"]
-                        .as_str()
-                        .expect("Failed to get name from remote_binary config");
+                if remote_binary_bundling {
+                    for binary in remote_binary {
+                        let url = binary["url"]
+                            .as_str()
+                            .expect("Failed to get URL from remote_binary config");
+                        let expected_checksum = binary["sha256hash"]
+                            .as_str()
+                            .expect("Failed to get sha256hash from remote_binary config");
+                        let dest_filename = binary["name"]
+                            .as_str()
+                            .expect("Failed to get name from remote_binary config");
 
-                    let response = reqwest::get(url)
-                        .await
-                        .expect("Failed to download remote_binary");
-                    let buffer = response
-                        .bytes()
-                        .await
-                        .expect("Failed to read remote_binary GET response");
+                        let response = reqwest::get(url)
+                            .await
+                            .expect("Failed to download remote_binary");
+                        let buffer = response
+                            .bytes()
+                            .await
+                            .expect("Failed to read remote_binary GET response");
 
-                    let mut hasher = Sha256::new();
-                    hasher.update(&buffer);
-                    let result = hasher.finalize();
-                    let checksum = format!("{:x}", result);
+                        let mut hasher = Sha256::new();
+                        hasher.update(&buffer);
+                        let result = hasher.finalize();
+                        let checksum = format!("{:x}", result);
 
-                    if checksum == expected_checksum {
-                        info!("Checksums match for file at URL: {}", url);
+                        if checksum == expected_checksum {
+                            info!("Checksums match for file at URL: {}", url);
 
-                        std::fs::create_dir_all(&bin_dir).expect("Failed to create directory");
-                        let filepath = bin_dir.join(dest_filename);
-                        std::fs::write(&filepath, &buffer).expect("Failed to write file");
-                        info!("File saved to: {:?}", filepath);
-                    } else {
-                        error!("Checksums do not match for file at URL: {}", url);
-                        panic!("Bad checksum for file defined in remote_binary")
+                            std::fs::create_dir_all(&bin_dir).expect("Failed to create directory");
+                            let filepath = bin_dir.join(dest_filename);
+                            std::fs::write(&filepath, &buffer).expect("Failed to write file");
+                            info!("File saved to: {:?}", filepath);
+                        } else {
+                            error!("Checksums do not match for file at URL: {}", url);
+                            panic!("Bad checksum for file defined in remote_binary")
+                        }
                     }
                 }
             }
+        }
+
+        if !remote_binary_bundling {
+            info!("Plugin does not want to bundle binaries during build");
         }
 
         if !any_binaries {
