@@ -119,7 +119,9 @@ impl Builder {
         let mut any_binaries: bool = false;
         let mut remote_binary_bundling: bool = false;
         if json["remote_binary_bundling"].as_bool().is_some() {
-            remote_binary_bundling = true;
+            if json["remote_binary_bundling"].as_bool().unwrap() == true {
+                remote_binary_bundling = true
+            }
         }
         if let Some(remote_binary) = json["remote_binary"].as_array() {
             if !remote_binary.is_empty() {
